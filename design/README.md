@@ -46,3 +46,61 @@ The browser receives only generated data and the established progression engine.
 Future rule changes must assess existing saves explicitly. Keeping an ID while
 changing numerical rules changes the interpretation of an existing run; this
 catalog mechanism alone is not a migration or versioning policy.
+
+## Optional action objectives for prestige
+
+A world may opt into `prestigeObjectives`, a nonempty list of at most 16
+records. Each record has a globally unique `id`, short `label`, `action`
+and positive integer `count`. Supported actions are:
+- `tap`: no target; count at most 1,000,000 discrete manual actions.
+- `buy-producer`: `targetId` names an existing producer; count at most
+  1,000 units actually purchased during this run, including bulk purchases.
+  The final required unit must also cost no more than the engine's point cap;
+  objectives requiring an unreachable purchase are refused.
+- `buy-upgrade`: `targetId` names an existing upgrade; count must be 1.
+
+Every objective must complete in the current run before the existing
+production-based prestige award becomes available. Objectives gate the award;
+they do not mint points, increase the award, replace the earnings threshold or
+remove the prestige cap. Progress saturates at the declared count. Failed
+actions do not advance it. Offline production and projection never count as
+manual actions. Prestige resets all objective progress, run taps, producers
+and upgrades; lifetime totals retain their existing meaning. Several objectives
+can observe the same action; all must be met.
+
+Example (test fixture, not a Mission: Mutualist design):
+```json
+{
+  "prestigeObjectives": [
+    {"id":"practice","label":"Make two manual actions","action":"tap","count":2},
+    {"id":"equip","label":"Buy two pencils","action":"buy-producer","targetId":"pencil","count":2}
+  ]
+}
+```
+
+Only opted-in worlds use `561.incremental-idle-state/v2`. They store
+`runTaps`, `objectiveProgress` and `objectiveContract`, the canonical JSON
+serialization of [id, action, target-or-null, count] tuples sorted by objective ID.
+Admission requires an exact contract, exact progress keys, bounded integers,
+and consistency with run taps/current inventory. Labels and display order can change without
+invalidating saves. Changing objective identity, target, count or action
+requires an explicit future migration or a distinct world identity. Adding
+objectives to a v1 world refuses its old saves rather than inventing completion.
+No automatic v1-to-v2 migration is offered. Use a new world ID for new objective
+content to preserve the original saved world. The existing browser storage-key
+namespace stays unchanged, and refused imports never overwrite stored data.
+
+Worlds without objectives retain the same catalog, generated world data, v1
+save shape, projections, prestige formula and reset behavior. The original
+catalog remains unchanged. New optional schema data passes through the same
+JSNode generator, runtime admission and static publisher; no parallel emitter
+or clock exists. Source generation cannot admit arbitrary callbacks.
+
+These are local game objectives, not organizational missions certified as
+complete. Saves can be edited by their owner; structural admission is not an
+anti-cheat mechanism or proof of real-world work. This supplies an engine
+primitive for later title-specific design. It does not invent Mission:
+Mutualist's mission taxonomy, economic balance, narrative, completion authority,
+external-system bridge or finished title. UI progress is surfaced using literal
+text. Automated tests receive the static module graph; no visual/browser-user
+acceptance or public deployment is claimed.

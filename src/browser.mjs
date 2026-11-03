@@ -41,6 +41,8 @@ function installWorld(next) {
     state=newRun(world,Date.now());
     status(`This ${world.label} save cannot be read. It has NOT been replaced. Export it or explicitly clear it to start again.`);
   }
+  $('objectives-section').hidden=!world.prestigeObjectives;
+  $('objectives').replaceChildren();
   $('world-name').textContent=world.label;
   $('world-description').textContent=world.description;
   $('tap').textContent=world.verb;
@@ -103,6 +105,12 @@ function render() {
   $('prestige').textContent=view.availablePrestige>0
     ? `Replant for +${view.availablePrestige} permanent spark${view.availablePrestige===1?'':'s'}`
     : `Replant after ${format.format(world.prestigeThreshold)} ${world.unit} this run`;
+  if (view.objectives) {
+    $('objectives').replaceChildren(...view.objectives.map(o=>el('li','',
+      `${o.label}: ${o.progress}/${o.count}${o.complete?' (complete)':''}`)));
+    if (view.objectives.some(o=>!o.complete))
+      $('prestige').textContent=`Complete all objectives and produce ${format.format(world.prestigeThreshold)} ${world.unit} to replant`;
+  }
   $('offline-rule').textContent=`Offline collection: up to ${world.offlineCapSeconds/3600} hours per return. Progress stays on this device.`;
   for(const p of view.producers) {
     const visible=p.locked ? `Unlocks at ${format.format(p.unlockAt)} produced` : `${format.format(p.nextCost)} ${world.unit} next`;
