@@ -6,6 +6,7 @@
 import { boundedNatural, elapsedTicks } from '@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
 
 export const STATE_KIND = '561.incremental-idle-state/v1';
+export const OBJECTIVE_STATE_KIND = '561.incremental-idle-state/v2';
 export const WORLD_KIND = '561.incremental-idle-world/v1';
 export const MAX_POINTS = 1_000_000_000_000_000;
 export const MAX_LEVEL = 1000;
@@ -29,6 +30,25 @@ function records(input, field, ids, check) {
     check(row);
     return Object.freeze({...row});
   }));
+}
+
+// Objective progress is local play data, never evidence of real-world completion.
+function objectiveContract(world) {
+  return JSON.stringify(world.prestigeObjectives.slice().sort((a,b)=>a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(({id,action,targetId,count}) =>
+    [id,action,targetId ?? null,count]));
+}
+function recordAction(world, state, action, targetId, count) {
+  if (!world.prestigeObjectives) return state;
+  const progress = {...state.objectiveProgress};
+  for (const objective of world.prestigeObjectives) {
+    if (objective.action === action && objective.targetId === targetId)
+      progress[objective.id] = Math.min(objective.count, progress[objective.id] + count);
+  }
+  return {...state, objectiveProgress:progress,
+    runTaps:action === 'tap' ? pointSum(state.runTaps,1) : state.runTaps};
+}
+export function objectivesComplete(world, state) {
+  return !world.prestigeObjectives || world.prestigeObjectives.every(o => state.objectiveProgress[o.id] === o.count);
 }
 
 /** Admit a named game world, including bounded rules and complete purchase data. */
@@ -59,22 +79,42 @@ export function defineWorld(candidate) {
       throw new RangeError('invalid upgrade contract');
   });
   if (!producers.some(p => p.unlockAt === 0)) throw new TypeError('world needs an initially unlocked producer');
+  let prestigeObjectives;
+  if (candidate.prestigeObjectives !== undefined) {
+    prestigeObjectives = records(candidate.prestigeObjectives, 'prestigeObjectives', ids, o => {
+      const allowed = ['id','label','action','targetId','count'];
+      if (Object.keys(o).some(key => !allowed.includes(key))) throw new TypeError('unknown objective field');
+      if (!['tap','buy-producer','buy-upgrade'].includes(o.action)) throw new TypeError('unknown objective action');
+      bounded(o.count, 'objective.count', o.action === 'tap' ? 1000000 : o.action === 'buy-producer' ? MAX_LEVEL : 1);
+      if (o.count < 1) throw new RangeError('objective.count must be positive');
+      if (o.action === 'tap') {
+        if (Object.hasOwn(o, 'targetId')) throw new TypeError('tap objective has no target');
+      } else if (!(o.action === 'buy-producer' ? producers : upgrades).some(row => row.id === o.targetId)) {
+        throw new TypeError('unknown objective target');
+      }
+      if (o.action === 'buy-producer' && producerPrice(producers.find(p=>p.id===o.targetId), o.count-1) > MAX_POINTS)
+        throw new RangeError('objective requires an unreachable producer purchase');
+    });
+  }
   return Object.freeze({kind:WORLD_KIND,id:candidate.id,label:candidate.label,description:candidate.description,
     unit:candidate.unit,verb:candidate.verb,offlineCapSeconds:candidate.offlineCapSeconds,
-    prestigeThreshold:candidate.prestigeThreshold,producers,upgrades});
+    prestigeThreshold:candidate.prestigeThreshold,producers,upgrades,
+    ...(prestigeObjectives ? {prestigeObjectives} : {})});
 }
 
 /** Seed a particular world; no clock reads or implicit save access. */
 export function newRun(world, nowMs) {
   boundedNatural(nowMs, 'nowMs');
-  return {kind:STATE_KIND,worldId:world.id,lastMs:nowMs,banked:0,runProduced:0,
+  return {kind:world.prestigeObjectives ? OBJECTIVE_STATE_KIND : STATE_KIND,worldId:world.id,lastMs:nowMs,banked:0,runProduced:0,
     allTime:0,prestige:0,taps:0,producers:Object.fromEntries(world.producers.map(p=>[p.id,0])),
-    upgrades:Object.fromEntries(world.upgrades.map(u=>[u.id,false]))};
+    upgrades:Object.fromEntries(world.upgrades.map(u=>[u.id,false])),
+    ...(world.prestigeObjectives ? {runTaps:0,objectiveContract:objectiveContract(world),
+      objectiveProgress:Object.fromEntries(world.prestigeObjectives.map(o=>[o.id,0]))} : {})};
 }
 
 /** Fail closed for malformed, incompatible or truncated stored runs. */
 export function admitRun(world, state) {
-  if (!state || typeof state !== 'object' || Array.isArray(state) || state.kind !== STATE_KIND || state.worldId !== world.id)
+  if (!state || typeof state !== 'object' || Array.isArray(state) || state.kind !== (world.prestigeObjectives ? OBJECTIVE_STATE_KIND : STATE_KIND) || state.worldId !== world.id)
     throw new TypeError('saved game belongs to another world or version');
   for (const k of ['lastMs','banked','runProduced','allTime','prestige','taps'])
     boundedNatural(state[k], `state.${k}`, k === 'prestige' ? MAX_PRESTIGE : k === 'lastMs' ? Number.MAX_SAFE_INTEGER : MAX_POINTS);
@@ -87,7 +127,23 @@ export function admitRun(world, state) {
     throw new TypeError('saved inventory no longer matches the world');
   for (const id of producerIds) boundedNatural(state.producers[id], `producers.${id}`, MAX_LEVEL);
   for (const id of upgradeIds) if (typeof state.upgrades[id] !== 'boolean') throw new TypeError(`upgrades.${id} must be a boolean`);
-  return {...state,producers:{...state.producers},upgrades:{...state.upgrades}};
+  if (world.prestigeObjectives) {
+    if (state.objectiveContract !== objectiveContract(world)) throw new TypeError('saved objective contract changed');
+    boundedNatural(state.runTaps, 'state.runTaps', MAX_POINTS);
+    if (state.runTaps > state.taps) throw new TypeError('saved run taps exceed lifetime taps');
+    const progress = state.objectiveProgress;
+    if (!progress || typeof progress !== 'object' || Array.isArray(progress) ||
+        Object.keys(progress).sort().join('|') !== world.prestigeObjectives.map(o=>o.id).sort().join('|'))
+      throw new TypeError('saved objective progress malformed');
+    for (const o of world.prestigeObjectives) {
+      boundedNatural(progress[o.id], 'objectiveProgress.' + o.id, o.count);
+      if (o.action === 'tap' && progress[o.id] !== Math.min(o.count,state.runTaps) ||
+          o.action === 'buy-producer' && progress[o.id] !== Math.min(o.count,state.producers[o.targetId]) ||
+          o.action === 'buy-upgrade' && progress[o.id] !== Number(state.upgrades[o.targetId]))
+        throw new TypeError('saved objective progress inconsistent');
+    }
+  }
+  return {...state,...(world.prestigeObjectives ? {objectiveProgress:{...state.objectiveProgress}} : {}),producers:{...state.producers},upgrades:{...state.upgrades}};
 }
 
 export function producerPrice(producer, owned) {
@@ -127,7 +183,7 @@ export function advance(world, candidate, nowMs) {
 export function tap(world,candidate,nowMs) {
   const previous=advance(world,candidate,nowMs);
   const amount=tapYield(world,previous.state);
-  return {accepted:true,state:{...credit(previous.state,amount),taps:pointSum(previous.state.taps,1)},gained:amount};
+  return {accepted:true,state:recordAction(world,{...credit(previous.state,amount),taps:pointSum(previous.state.taps,1)},'tap',undefined,1),gained:amount};
 }
 
 export function buyProducer(world,candidate,id,requested,nowMs) {
@@ -144,7 +200,7 @@ export function buyProducer(world,candidate,id,requested,nowMs) {
     balance-=price; spent+=price; bought++; owned++;
   }
   if (bought===0) return {accepted:false,reason:owned===MAX_LEVEL?'level-cap':'insufficient-points',state};
-  return {accepted:true,count:bought,spent,state:{...state,banked:balance,producers:{...state.producers,[id]:owned}}};
+  return {accepted:true,count:bought,spent,state:recordAction(world,{...state,banked:balance,producers:{...state.producers,[id]:owned}},'buy-producer',id,bought)};
 }
 
 export function buyUpgrade(world,candidate,id,nowMs) {
@@ -154,19 +210,19 @@ export function buyUpgrade(world,candidate,id,nowMs) {
   if (state.upgrades[id]) return {accepted:false,reason:'already-owned',state};
   if (state.runProduced<upgrade.unlockAt) return {accepted:false,reason:'locked',state};
   if (state.banked<upgrade.cost) return {accepted:false,reason:'insufficient-points',state};
-  return {accepted:true,state:{...state,banked:state.banked-upgrade.cost,
-    upgrades:{...state.upgrades,[id]:true}}};
+  return {accepted:true,state:recordAction(world,{...state,banked:state.banked-upgrade.cost,
+    upgrades:{...state.upgrades,[id]:true}},'buy-upgrade',id,1)};
 }
 
 export function availablePrestige(world, state) {
-  if (state.prestige>=MAX_PRESTIGE) return 0;
+  if (state.prestige>=MAX_PRESTIGE || !objectivesComplete(world,state)) return 0;
   return Math.min(MAX_PRESTIGE-state.prestige,Math.floor(Math.sqrt(state.runProduced/world.prestigeThreshold)));
 }
 
 export function prestige(world,candidate,nowMs) {
   const previous=advance(world,candidate,nowMs), state=previous.state;
   const awarded=availablePrestige(world,state);
-  if (!awarded) return {accepted:false,reason:'threshold-not-met',state};
+  if (!awarded) return {accepted:false,reason:objectivesComplete(world,state)?'threshold-not-met':'objectives-not-met',state};
   const reset=newRun(world,state.lastMs);
   return {accepted:true,awarded,state:{...reset,prestige:state.prestige+awarded,
     allTime:state.allTime,taps:state.taps}};
@@ -176,6 +232,8 @@ export function project(world,candidate,nowMs) {
   const {state,gained,seconds,discardedSeconds}=advance(world,candidate,nowMs);
   return {state,gained,seconds,discardedSeconds,rate:incomePerSecond(world,state),tapYield:tapYield(world,state),
     availablePrestige:availablePrestige(world,state),
+    ...(world.prestigeObjectives ? {objectives:world.prestigeObjectives.map(o=>({...o,
+      progress:state.objectiveProgress[o.id],complete:state.objectiveProgress[o.id]===o.count}))} : {}),
     producers:world.producers.map(p=>({...p,owned:state.producers[p.id],nextCost:producerPrice(p,state.producers[p.id]),
       locked:state.runProduced<p.unlockAt})),
     upgrades:world.upgrades.map(u=>({...u,owned:state.upgrades[u.id],locked:state.runProduced<u.unlockAt}))};

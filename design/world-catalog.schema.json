@@ -6,53 +6,202 @@
   "type": "array",
   "minItems": 1,
   "maxItems": 32,
-  "items": { "$ref": "#/$defs/world" },
+  "items": {
+    "$ref": "#/$defs/world"
+  },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,47}$" },
-    "text": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "\\S" },
-    "points": { "type": "integer", "minimum": 0, "maximum": 1000000000000000 },
-    "positivePoints": { "type": "integer", "minimum": 1, "maximum": 1000000000000000 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,47}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "\\S"
+    },
+    "points": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000000
+    },
+    "positivePoints": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000000
+    },
     "producer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "baseCost", "ratePerSecond", "growthBasisPoints", "unlockAt"],
+      "required": [
+        "id",
+        "label",
+        "baseCost",
+        "ratePerSecond",
+        "growthBasisPoints",
+        "unlockAt"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "label": { "$ref": "#/$defs/text" },
-        "baseCost": { "$ref": "#/$defs/positivePoints" },
-        "ratePerSecond": { "$ref": "#/$defs/positivePoints" },
-        "growthBasisPoints": { "type": "integer", "minimum": 10000, "maximum": 30000 },
-        "unlockAt": { "$ref": "#/$defs/points" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "$ref": "#/$defs/text"
+        },
+        "baseCost": {
+          "$ref": "#/$defs/positivePoints"
+        },
+        "ratePerSecond": {
+          "$ref": "#/$defs/positivePoints"
+        },
+        "growthBasisPoints": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 30000
+        },
+        "unlockAt": {
+          "$ref": "#/$defs/points"
+        }
       }
     },
     "upgrade": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "cost", "unlockAt", "effect", "amount"],
+      "required": [
+        "id",
+        "label",
+        "cost",
+        "unlockAt",
+        "effect",
+        "amount"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "label": { "$ref": "#/$defs/text" },
-        "cost": { "$ref": "#/$defs/positivePoints" },
-        "unlockAt": { "$ref": "#/$defs/points" },
-        "effect": { "enum": ["tap", "production"] },
-        "amount": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "$ref": "#/$defs/text"
+        },
+        "cost": {
+          "$ref": "#/$defs/positivePoints"
+        },
+        "unlockAt": {
+          "$ref": "#/$defs/points"
+        },
+        "effect": {
+          "enum": [
+            "tap",
+            "production"
+          ]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
       }
     },
     "world": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "id", "label", "description", "unit", "verb", "offlineCapSeconds", "prestigeThreshold", "producers", "upgrades"],
+      "required": [
+        "kind",
+        "id",
+        "label",
+        "description",
+        "unit",
+        "verb",
+        "offlineCapSeconds",
+        "prestigeThreshold",
+        "producers",
+        "upgrades"
+      ],
       "properties": {
-        "kind": { "const": "561.incremental-idle-world/v1" },
-        "id": { "$ref": "#/$defs/id" },
-        "label": { "$ref": "#/$defs/text" },
-        "description": { "$ref": "#/$defs/text" },
-        "unit": { "$ref": "#/$defs/text" },
-        "verb": { "$ref": "#/$defs/text" },
-        "offlineCapSeconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
-        "prestigeThreshold": { "type": "integer", "minimum": 100, "maximum": 1000000000000000 },
-        "producers": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/producer" } },
-        "upgrades": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/upgrade" } }
+        "kind": {
+          "const": "561.incremental-idle-world/v1"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/text"
+        },
+        "verb": {
+          "$ref": "#/$defs/text"
+        },
+        "offlineCapSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "prestigeThreshold": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 1000000000000000
+        },
+        "producers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/producer"
+          }
+        },
+        "upgrades": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/upgrade"
+          }
+        },
+        "prestigeObjectives": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/objective"
+          }
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "action",
+        "count"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "$ref": "#/$defs/text"
+        },
+        "action": {
+          "enum": [
+            "tap",
+            "buy-producer",
+            "buy-upgrade"
+          ]
+        },
+        "targetId": {
+          "$ref": "#/$defs/id"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
       }
     }
   }
