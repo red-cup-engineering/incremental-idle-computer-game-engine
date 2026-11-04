@@ -149,6 +149,21 @@ Buying one choice changes the others. Quotes do not reserve funds, grant
 objectives, simulate future purchases or replace saved runs. Old pinned title
 artifacts remain unchanged. See `design/upgrade-quotes.md` for the full contract.
 
+## Plan the next replant
+
+`quotePrestige(world, run)` from `/engine` shows the current permanent spark
+award, the exact production needed for the next higher award, incomplete action
+objectives, and what the actual reset would clear and preserve. It is clock-free:
+settle time explicitly first and always use `prestige` for the real action.
+
+Both Little Worlds show this decision before replanting: points and inventory
+lost, new permanent total and manual yield, and automatic production restarting
+at zero. A full spark cap or unreachable higher target is stated explicitly.
+Quotes do not reset or save runs, reserve sparks or complete objectives. The
+shared award calculation uses bounded exact integer thresholds; save formats,
+world balance and external titles' pinned artifacts remain unchanged. See
+[replant planning](design/prestige-planning.md) for the public result contract.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
