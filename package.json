@@ -26,7 +26,8 @@
     "url": "https://github.com/561-group/.github/blob/main/TIPS.md"
   },
   "devDependencies": {
-    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5"
+    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5",
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": "file:artifacts/gamehouse-verified-save-3e548251.tgz"
   },
   "exports": {
     "./engine": "./src/engine.mjs",
@@ -44,10 +45,14 @@
     "test"
   ],
   "peerDependencies": {
-    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5"
+    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5",
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": "0.1.1"
   },
   "peerDependenciesMeta": {
     "@red-cup-engineering/jsnode-package-services-section": {
+      "optional": true
+    },
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": {
       "optional": true
     }
   }

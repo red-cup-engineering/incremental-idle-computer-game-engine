@@ -11,7 +11,7 @@ test('native publisher produces a self-contained, offline-capable two-world brow
   const out=await mkdtemp(join(tmpdir(),'little-worlds-'));
   try {
     const result=await build(out);
-    assert.equal(result.files.length,9);
+    assert.equal(result.files.length,10);
     const html=await readFile(join(out,'index.html'),'utf8');
     for(const id of ['tap','prestige','producers','upgrades','export','import','reset','status']) assert.match(html,new RegExp(`id="${id}"`));
     assert.match(html,/No ads, accounts, analytics/);
@@ -36,6 +36,13 @@ test('native publisher produces a self-contained, offline-capable two-world brow
     assert.equal(receipt.kind,'561.incremental-idle-fabrication-receipt/v1');
     assert.equal(receipt.design.length,2);
     assert.equal(receipt.generated[0].path,'src/generated/world-definitions.mjs');
+    const saveSupplier='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
+    const saveBytes=await readFile(new URL(import.meta.resolve(saveSupplier)));
+    assert.deepEqual(await readFile(join(out,'assets','verified-save-write.mjs')),saveBytes);
+    assert.equal(receipt.browserSupplier.specifier,saveSupplier);
+    assert.equal(receipt.browserSupplier.digest,'sha256:'+createHash('sha256').update(saveBytes).digest('hex'));
+    assert.match(await readFile(join(out,'assets','browser.mjs'),'utf8'),/from '\.\/verified-save-write\.mjs'/);
+    assert.match(html,/id="save-status"/);
     for (const artifact of receipt.artifacts) {
       const bytes=await readFile(join(out,artifact.path));
       assert.equal(artifact.digest,'sha256:'+createHash('sha256').update(bytes).digest('hex'));

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
 import * as transactions from '@red-cup-engineering/incremental-idle-game/transactions';
 import { WORLDS } from '@red-cup-engineering/incremental-idle-game/worlds';
@@ -37,6 +38,27 @@ test('generation tooling declares its exact optional peer without expanding the 
   assert.equal(manifest.exports['./scripts/*'], './scripts/*');
   assert.equal(manifest.scripts.generate, 'node scripts/generate-worlds.mjs');
   assert.equal(manifest.scripts['check:generated'], 'node scripts/generate-worlds.mjs --check');
+});
+
+test('browser custody selects a tiny optional supplier without adding an engine runtime dependency', async () => {
+  const manifest=JSON.parse(await readFile(new URL('../package.json',import.meta.url)));
+  const supplier='@red-cup-engineering/computer-game-systems-engineering-services-section';
+  assert.equal(manifest.peerDependencies[supplier],'0.1.1');
+  assert.deepEqual(manifest.peerDependenciesMeta[supplier],{optional:true});
+  assert.equal(manifest.devDependencies[supplier],'file:artifacts/gamehouse-verified-save-3e548251.tgz');
+  assert.equal(Object.hasOwn(manifest.dependencies,supplier),false);
+  const entry=new URL(import.meta.resolve(`${supplier}/verified-save-write`));
+  const owner=JSON.parse(await readFile(new URL('../package.json',entry)));
+  assert.equal(owner.name,supplier);
+  assert.deepEqual(owner.dependencies??{},{});
+  assert.deepEqual(owner.peerDependencies??{},{});
+  const helper=await readFile(entry,'utf8');
+  assert.equal(createHash('sha256').update(helper).digest('hex'),'fe0bfb8a06e7864a1302abc3a0bac5a5de62a344a12c3011f0f1fc9df1ba09f7');
+  assert.doesNotMatch(helper,/\bimport\b/);
+  for(const name of ['engine.mjs','worlds.mjs','transactions.mjs']) {
+    const source=await readFile(new URL(`../src/${name}`,import.meta.url),'utf8');
+    assert.equal(source.includes(supplier),false);
+  }
 });
 
 test('resource spending preserves partial objective progress and cannot buy prestige eligibility', () => {

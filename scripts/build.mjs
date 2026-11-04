@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { generateWorlds } from './generate-worlds.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const supplier='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
+const saveSupplier='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 const src=path=>join(root,'src',path);
 
 export async function build(out = join(root,'dist')) {
@@ -15,11 +16,16 @@ export async function build(out = join(root,'dist')) {
   const fabrication=await generateWorlds({check:true,root});
   const engine=await readFile(src('engine.mjs'),'utf8');
   if (!engine.includes(`'${supplier}'`)) throw new Error('game engine must import canonical data clock');
-  const assets=await Promise.all(['worlds.mjs','browser.mjs','style.css'].map(async name=>[name,await readFile(src(name))]));
+  const assets=await Promise.all(['worlds.mjs','style.css'].map(async name=>[name,await readFile(src(name))]));
+  const browser=await readFile(src('browser.mjs'),'utf8');
+  if (!browser.includes(`'${saveSupplier}'`)) throw new Error('browser custody must use its declared save supplier');
+  const saveWriter=await readFile(fileURLToPath(import.meta.resolve(saveSupplier)));
   const clock=await readFile(fileURLToPath(import.meta.resolve(supplier)));
   await mkdir(join(dest,'assets','generated'),{recursive:true});
   await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${supplier}'`,`'./discrete-clock.mjs'`));
   for (const [name,bytes] of assets) await writeFile(join(dest,'assets',name),bytes);
+  await writeFile(join(dest,'assets','browser.mjs'),browser.replace(`'${saveSupplier}'`,`'./verified-save-write.mjs'`));
+  await writeFile(join(dest,'assets','verified-save-write.mjs'),saveWriter);
   await writeFile(join(dest,'assets','generated','world-definitions.mjs'),fabrication.files[0].text);
   await writeFile(join(dest,'assets','discrete-clock.mjs'),clock);
   await writeFile(join(dest,'index.html'),`<!doctype html>
@@ -37,19 +43,20 @@ export async function build(out = join(root,'dist')) {
 <section id="objectives-section" hidden><h2>Objectives this run</h2><p>Complete every objective as well as the production threshold to replant. Objectives reset each run.</p><ul id="objectives"></ul></section>
 <p id="offline-rule" class="muted"></p></section>
 <section class="panel"><div class="eyebrow">Build your world</div><h2>Producers</h2><div id="producers"></div><h2>Upgrades</h2><div id="upgrades"></div></section>
-<section class="panel wide"><div class="eyebrow">Own your local progress</div><h2>Save, move, or start fresh</h2><p>Your worlds save separately on this device. Export a copy if you want to keep them. Nothing here is cryptocurrency, a cash reward, or transferable value.</p>
+<section class="panel wide"><div class="eyebrow">Own your local progress</div><h2>Save, move, or start fresh</h2><p>Your worlds save separately on this device. Export a copy if you want to keep them. Live runs stay available while switching worlds in this page, even if saving fails, but closing or reloading can lose unsaved changes. Use one tab per world. Import and confirmed reset replace this world's saved progress. Nothing here is cryptocurrency, a cash reward, or transferable value.</p><p id="save-status" class="feedback" role="status" aria-live="polite"></p>
 <div class="tools"><button type="button" class="secondary" id="export">Export this world</button><button type="button" class="secondary" id="import">Import pasted save</button><button type="button" class="secondary" id="reset">Reset this world</button></div>
 <label for="save-data">Save text (JSON)</label><textarea id="save-data" spellcheck="false" aria-label="Saved game JSON"></textarea></section>
 </div><footer>Local-only play · No ads, accounts, analytics, financial transactions, or artificial players. Offline progress uses your device clock and can be changed by your device. Accessible by keyboard; reduced motion is respected.</footer>
 </main><script type="module" src="./assets/browser.mjs"></script></body></html>\n`);
   await writeFile(join(dest,'_headers'),`/*\n  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n`);
-  const files=['index.html','assets/engine.mjs','assets/discrete-clock.mjs','assets/worlds.mjs','assets/generated/world-definitions.mjs','assets/browser.mjs','assets/style.css','_headers'];
+  const files=['index.html','assets/engine.mjs','assets/discrete-clock.mjs','assets/worlds.mjs','assets/generated/world-definitions.mjs','assets/browser.mjs','assets/verified-save-write.mjs','assets/style.css','_headers'];
   const digest=bytes=>'sha256:'+createHash('sha256').update(bytes).digest('hex');
   const manifest=await Promise.all(files.map(async path=>({path,digest:digest(await readFile(join(dest,path)))})));
   const receipt={kind:'561.incremental-idle-fabrication-receipt/v1',
     design:fabrication.design,generated:fabrication.generated,
     producer:fabrication.producer,
-    supplier:{specifier:supplier,digest:digest(clock)},artifacts:manifest,
+    supplier:{specifier:supplier,digest:digest(clock)},
+    browserSupplier:{specifier:saveSupplier,digest:digest(saveWriter)},artifacts:manifest,
     receiving:'Deterministic design admission and static build; public deployment and player receiving are separate.'};
   await writeFile(join(dest,'fabrication-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
   return {dest,files:[...files,'fabrication-receipt.json'],receipt};
