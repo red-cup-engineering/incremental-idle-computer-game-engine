@@ -103,6 +103,37 @@ before it, including all 1,000 phases, saturation, safe-time boundaries, native
 purchases/resets and both shipped worlds. Existing transition and save behavior
 is unchanged; this is an additional read-only capability.
 
+## Clock-free producer purchase quotes
+
+`quoteProducerPurchase(world, run, producerId, requested)` from `/engine` returns
+`{accepted, count, spent, rateGain}` for a possible purchase against the supplied
+admitted balance. Refusals add `reason` and return zero for all three metrics.
+The result contains no speculative state, clock timestamp, objective progress,
+reservation or reusable purchase authority. `rateGain` uses the same current
+upgrade/prestige rounding and income cap as the actual engine.
+
+- `requested` is an integer from 0 through 100 or `'max'` (at most 100 units).
+  Batches remain partial: buy as many as the balance and level cap permit.
+  Zero, unknown, locked, capped and unaffordable requests retain the command's
+  existing refusal reasons and validation order.
+- The quote never settles time. Call `advance`, `advanceActive` or `project`
+  explicitly first if a current observation should affect the balance. This
+  keeps wall clocks and active-time policy with the caller.
+- `buyProducer` still settles its supplied clock and recomputes the plan at the
+  actual action. Never adopt a quote as a save or combine independent quotes as
+  though they reserve a shared balance.
+- Quote and command use one private planner and exact integer price recurrence.
+  The planner walks to the current price once, then extends it per purchased
+  unit instead of recomputing every preceding level for every unit.
+
+Trace Garden and Pocket Observatory use this engine quote for both batch
+previews after their normal projection. Rendering no longer simulates purchase
+or objective transitions. Clicks still use the original command, and all saved
+run kinds, progression rules, point arithmetic and package dependencies remain
+unchanged. This additive API does not publish a package or update an external
+title's pinned artifact. See `design/purchase-quotes.md` for the boundary and
+native/consumer receiving obligations.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
