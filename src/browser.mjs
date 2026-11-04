@@ -1,5 +1,5 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, incomePerSecond, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quoteProducerPurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -205,12 +205,12 @@ function render() {
       : `Next unit: ${purchaseReadiness(p.nextCost,now)}`;
     for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=MAX_LEVEL || state.banked<p.nextCost;
     for(const n of [10,'max']) {
-      // The original transition is pure. Preview its result but never adopt or
-      // save it; the actual click recomputes against current state and time.
-      const quote=buyProducer(world,state,p.id,n,now);
+      // project has already settled this observation. Quotes cannot advance
+      // time or award actions; the actual click settles and plans afresh.
+      const quote=quoteProducerPurchase(world,state,p.id,n);
       const label=n==='max'?'Buy max':'Buy 10';
       btns.previews.get(`${p.id}:${n}`).textContent=quote.accepted
-        ? `${label}: ${quote.count} for ${exact.format(quote.spent)} ${world.unit}; +${exact.format(incomePerSecond(world,quote.state)-view.rate)} / sec.`
+        ? `${label}: ${quote.count} for ${exact.format(quote.spent)} ${world.unit}; +${exact.format(quote.rateGain)} / sec.`
         : `${label}: ${p.locked?'locked':p.owned>=MAX_LEVEL?'level limit reached':'no affordable units yet'}.`;
     }
   }

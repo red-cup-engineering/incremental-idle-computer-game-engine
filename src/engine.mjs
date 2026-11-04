@@ -146,6 +146,10 @@ export function admitRun(world, state) {
   return {...state,...(world.prestigeObjectives ? {objectiveProgress:{...state.objectiveProgress}} : {}),producers:{...state.producers},upgrades:{...state.upgrades}};
 }
 
+function nextProducerPrice(price, growth) {
+  return (price * growth + 9999n) / 10000n;
+}
+
 export function producerPrice(producer, owned) {
   boundedNatural(owned, 'owned', MAX_LEVEL);
   // Admitted prices are safe integers, but the basis-point product can exceed
@@ -153,7 +157,7 @@ export function producerPrice(producer, owned) {
   let price = BigInt(producer.baseCost);
   const growth = BigInt(producer.growthBasisPoints), cap = BigInt(MAX_POINTS);
   for (let n=0; n<owned; n++) {
-    price = (price * growth + 9999n) / 10000n;
+    price = nextProducerPrice(price, growth);
     if (price > cap) return MAX_POINTS + 1;
   }
   return Number(price);
@@ -238,21 +242,46 @@ export function tap(world,candidate,nowMs) {
   return {accepted:true,state:recordAction(world,{...credit(previous.state,amount),taps:pointSum(previous.state.taps,1)},'tap',undefined,1),gained:amount};
 }
 
+// One planner serves both a clock-free quote and the clock-settling command.
+// Walk to the current level once, then extend the exact recurrence per unit.
+function planProducerPurchase(world,state,id,requested) {
+  const p=world.producers.find(x=>x.id===id);
+  if (!p) return {accepted:false,reason:'unknown-producer'};
+  if (state.runProduced<p.unlockAt) return {accepted:false,reason:'locked'};
+  const quantity=requested==='max' ? 100 : boundedNatural(requested,'requested',100);
+  if (quantity===0) return {accepted:false,reason:'zero-quantity'};
+  let owned=state.producers[id], balance=state.banked, spent=0, bought=0;
+  let price=BigInt(producerPrice(p,owned));
+  const growth=BigInt(p.growthBasisPoints);
+  while (bought<quantity && owned<MAX_LEVEL) {
+    if (price>BigInt(balance)) break;
+    const cost=Number(price);
+    balance-=cost; spent+=cost; bought++; owned++;
+    price=nextProducerPrice(price,growth);
+  }
+  if (bought===0) return {accepted:false,reason:owned===MAX_LEVEL?'level-cap':'insufficient-points'};
+  return {accepted:true,count:bought,spent,balance,owned};
+}
+
+/** Quote an admitted balance without advancing time, awarding objectives or
+ * returning a speculative state. Partial batches and max's 100-unit limit are
+ * identical to buyProducer. Settle time explicitly before quoting when needed;
+ * an actual command always recomputes and never accepts a quote as authority.
+ */
+export function quoteProducerPurchase(world,candidate,id,requested) {
+  const state=admitRun(world,candidate), plan=planProducerPurchase(world,state,id,requested);
+  if (!plan.accepted) return {...plan,count:0,spent:0,rateGain:0};
+  const after={...state,producers:{...state.producers,[id]:plan.owned}};
+  return {accepted:true,count:plan.count,spent:plan.spent,
+    rateGain:incomePerSecond(world,after)-incomePerSecond(world,state)};
+}
+
 export function buyProducer(world,candidate,id,requested,nowMs) {
   const previous=advance(world,candidate,nowMs), state=previous.state;
-  const p=world.producers.find(x=>x.id===id);
-  if (!p) return {accepted:false,reason:'unknown-producer',state};
-  if (state.runProduced<p.unlockAt) return {accepted:false,reason:'locked',state};
-  const quantity=requested==='max' ? 100 : boundedNatural(requested,'requested',100);
-  if (quantity===0) return {accepted:false,reason:'zero-quantity',state};
-  let owned=state.producers[id], balance=state.banked, spent=0, bought=0;
-  while (bought<quantity && owned<MAX_LEVEL) {
-    const price=producerPrice(p,owned);
-    if (price>balance) break;
-    balance-=price; spent+=price; bought++; owned++;
-  }
-  if (bought===0) return {accepted:false,reason:owned===MAX_LEVEL?'level-cap':'insufficient-points',state};
-  return {accepted:true,count:bought,spent,state:recordAction(world,{...state,banked:balance,producers:{...state.producers,[id]:owned}},'buy-producer',id,bought)};
+  const plan=planProducerPurchase(world,state,id,requested);
+  if (!plan.accepted) return {...plan,state};
+  return {accepted:true,count:plan.count,spent:plan.spent,
+    state:recordAction(world,{...state,banked:plan.balance,producers:{...state.producers,[id]:plan.owned}},'buy-producer',id,plan.count)};
 }
 
 export function buyUpgrade(world,candidate,id,nowMs) {
