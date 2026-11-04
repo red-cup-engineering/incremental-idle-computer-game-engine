@@ -316,18 +316,56 @@ export function buyUpgrade(world,candidate,id,nowMs) {
     upgrades:{...state.upgrades,[id]:true}},'buy-upgrade',id,1)};
 }
 
+function productionPrestige(world,state) {
+  // At most 1,000 sparks remain. Compare integer thresholds without rounding a
+  // large quadratic target or relying on floating-point square roots.
+  let low=0,high=MAX_PRESTIGE-state.prestige;
+  const produced=BigInt(state.runProduced),threshold=BigInt(world.prestigeThreshold);
+  while(low<high) {
+    const middle=Math.ceil((low+high)/2),amount=BigInt(middle);
+    if(threshold*amount*amount<=produced) low=middle;
+    else high=middle-1;
+  }
+  return low;
+}
+
 export function availablePrestige(world, state) {
   if (state.prestige>=MAX_PRESTIGE || !objectivesComplete(world,state)) return 0;
-  return Math.min(MAX_PRESTIGE-state.prestige,Math.floor(Math.sqrt(state.runProduced/world.prestigeThreshold)));
+  return productionPrestige(world,state);
+}
+
+function prestigeReset(world,state,awarded) {
+  return {...newRun(world,state.lastMs),prestige:state.prestige+awarded,
+    allTime:state.allTime,taps:state.taps};
+}
+
+/** Clock-free replant decision: the current award, next production threshold,
+ * objective shortfalls and actual reset tradeoff. Summaries are not saved runs
+ * or reservations. A command settles time and recomputes its award afresh.
+ */
+export function quotePrestige(world,candidate) {
+  const state=admitRun(world,candidate),productionAward=productionPrestige(world,state);
+  const remainingCapacity=MAX_PRESTIGE-state.prestige;
+  const missingObjectives=(world.prestigeObjectives ?? []).filter(o=>state.objectiveProgress[o.id]<o.count)
+    .map(({id,label,count})=>({id,label,progress:state.objectiveProgress[id],count}));
+  const awarded=missingObjectives.length ? 0 : productionAward;
+  const target=BigInt(world.prestigeThreshold)*BigInt(productionAward+1)**2n;
+  const next=productionAward<remainingCapacity && target<=BigInt(MAX_POINTS)
+    ? {awarded:productionAward+1,runProduced:Number(target),missingProduced:Number(target)-state.runProduced}
+    : null;
+  const reset=awarded ? prestigeReset(world,state,awarded) : null;
+  return {accepted:awarded>0,awarded,productionAward,remainingCapacity,missingObjectives,next,
+    reset:reset ? {prestige:reset.prestige,tapYield:tapYield(world,reset),rate:incomePerSecond(world,reset),
+      bankedLost:state.banked,producerUnitsLost:Object.values(state.producers).reduce((sum,n)=>sum+n,0),
+      upgradesLost:Object.values(state.upgrades).filter(Boolean).length} : null,
+    ...(!awarded ? {reason:missingObjectives.length?'objectives-not-met':'threshold-not-met'} : {})};
 }
 
 export function prestige(world,candidate,nowMs) {
   const previous=advance(world,candidate,nowMs), state=previous.state;
   const awarded=availablePrestige(world,state);
   if (!awarded) return {accepted:false,reason:objectivesComplete(world,state)?'threshold-not-met':'objectives-not-met',state};
-  const reset=newRun(world,state.lastMs);
-  return {accepted:true,awarded,state:{...reset,prestige:state.prestige+awarded,
-    allTime:state.allTime,taps:state.taps}};
+  return {accepted:true,awarded,state:prestigeReset(world,state,awarded)};
 }
 
 export function project(world,candidate,nowMs) {

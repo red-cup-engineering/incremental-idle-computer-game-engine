@@ -1,5 +1,5 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -99,6 +99,28 @@ function readinessNode(id,content) {
   content.append(node);btns.readiness.set(id,node);
   return `readiness-${id}`;
 }
+function renderPrestige() {
+  // render has already settled time. The same planner is used by the click.
+  const quote=quotePrestige(world,state),button=$('prestige');
+  button.disabled=!quote.accepted;
+  button.setAttribute('aria-describedby','prestige-preview');
+  button.textContent=quote.accepted
+    ? `Replant for +${quote.awarded} permanent spark${quote.awarded===1?'':'s'}`
+    : quote.remainingCapacity===0 ? 'Permanent spark limit reached'
+    : quote.missingObjectives.length ? 'Complete all objectives to replant'
+    : quote.next ? `Replant after ${exact.format(quote.next.runProduced)} ${world.unit} this run` : 'Production limit prevents replanting';
+  const summary=[`Produced ${exact.format(state.runProduced)} ${world.unit} this run.`];
+  if(quote.accepted) summary.push(`Replant now: +${exact.format(quote.awarded)} permanent sparks.`);
+  else if(quote.remainingCapacity===0) summary.push('Permanent spark limit reached; replanting is unavailable.');
+  else summary.push(`Replant now: unavailable. Production qualifies for ${exact.format(quote.productionAward)} sparks.`);
+  if(quote.missingObjectives.length) summary.push(`Still needed: ${quote.missingObjectives.map(o=>`${o.label} (${exact.format(o.progress)}/${exact.format(o.count)})`).join('; ')}.`);
+  if(quote.next) summary.push(`Next award: +${exact.format(quote.next.awarded)} sparks at ${exact.format(quote.next.runProduced)} ${world.unit} produced this run (${exact.format(quote.next.missingProduced)} more).${quote.missingObjectives.length?' All objectives must also be complete.':''}`);
+  else if(quote.remainingCapacity>0) summary.push(quote.productionAward===quote.remainingCapacity
+    ? 'This replant reaches the permanent spark limit; further production cannot increase its award.'
+    : 'No higher award is reachable within the production limit.');
+  if(quote.reset) summary.push(`Replant resets: lose ${exact.format(quote.reset.bankedLost)} banked ${world.unit}, ${exact.format(quote.reset.producerUnitsLost)} producer units and ${exact.format(quote.reset.upgradesLost)} upgrades. New run: ${exact.format(quote.reset.prestige)} permanent sparks, +${exact.format(quote.reset.tapYield)} per action and ${exact.format(quote.reset.rate)} / sec.${world.prestigeObjectives?' Objectives start over.':''}`);
+  $('prestige-preview').textContent=summary.join(' ');
+}
 function installWorld(next) {
   world=next;
   slot=readSaved(world);state=slot.state;blocked=slot.blocked;
@@ -173,6 +195,8 @@ function render() {
     $('tap').disabled=true;$('prestige').disabled=true;
     for (const id of ['banked','rate','tap-yield','run-produced','all-time','prestige-points']) $(id).textContent='Unavailable';
     $('prestige').textContent='Load a valid save to replant';
+    $('prestige').setAttribute('aria-describedby','prestige-preview');
+    $('prestige-preview').textContent='Load a valid save to preview replanting.';
     for(const b of btns.producers.values()) if(b.tagName==='BUTTON') b.disabled=true;
     for(const b of btns.upgrades.values()) b.disabled=true;
     for(const node of btns.readiness.values()) node.textContent='Load a valid save to see purchase readiness.';
@@ -189,15 +213,10 @@ function render() {
   $('all-time').textContent=format.format(state.allTime);
   $('prestige-points').textContent=String(state.prestige);
   $('tap').disabled=false;
-  $('prestige').disabled=view.availablePrestige===0;
-  $('prestige').textContent=view.availablePrestige>0
-    ? `Replant for +${view.availablePrestige} permanent spark${view.availablePrestige===1?'':'s'}`
-    : `Replant after ${format.format(world.prestigeThreshold)} ${world.unit} this run`;
+  renderPrestige();
   if (view.objectives) {
     $('objectives').replaceChildren(...view.objectives.map(o=>el('li','',
       `${o.label}: ${o.progress}/${o.count}${o.complete?' (complete)':''}`)));
-    if (view.objectives.some(o=>!o.complete))
-      $('prestige').textContent=`Complete all objectives and produce ${format.format(world.prestigeThreshold)} ${world.unit} to replant`;
   }
   $('offline-rule').textContent=`Offline collection: up to ${world.offlineCapSeconds/3600} hours per return. Progress stays on this device.`;
   for(const p of view.producers) {
