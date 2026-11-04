@@ -1,22 +1,68 @@
 import { WORLDS, worldById } from './worlds.mjs';
 import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige } from './engine.mjs';
+import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
 const format = new Intl.NumberFormat('en-US', { maximumFractionDigits:0, notation:'compact' });
 const storageKey = id => `561-incremental-idle:${id}:v1`;
 const pick = new URLSearchParams(location.search).get('world');
-let world=worldById(pick) ?? WORLDS[0], state, blocked=false, resetArmed=false;
+let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=false;
+// At most the declared worlds. These page-local runs are not durable backups.
+// Keeping them prevents a failed save followed by a world switch losing play.
+const runs=new Map();
 const btns={producers:new Map(),upgrades:new Map()};
 const status = text => { $('status').textContent=text; };
 
 function readSaved(current) {
-  const raw=localStorage.getItem(storageKey(current.id));
-  return raw===null ? newRun(current,Date.now()) : admitRun(current,JSON.parse(raw));
+  if (runs.has(current.id)) return runs.get(current.id);
+  const entry={state:newRun(current,Date.now()),expected:null,raw:null,blocked:false,conflicted:false,error:''};
+  try {
+    entry.raw=localStorage.getItem(storageKey(current.id));
+    entry.expected=entry.raw;
+    if (entry.raw!==null) entry.state=admitRun(current,JSON.parse(entry.raw));
+  } catch {
+    entry.blocked=true;
+    entry.error='The saved run could not be read. It has not been replaced.';
+  }
+  runs.set(current.id,entry);
+  return entry;
+}
+function showSaveStatus() {
+  $('save-status').textContent=[...runs].filter(([,entry])=>entry.error).map(([id,entry])=>
+    `${worldById(id).label}: ${entry.error}${entry.blocked?' Export the original text if available, or explicitly replace it.':' Live progress remains in this page. Select this world and export before closing.'}`).join(' ');
+}
+function writeSave(raw) {
+  return writeVerifiedSave({text:raw,write:text=>localStorage.setItem(storageKey(world.id),text),read:()=>localStorage.getItem(storageKey(world.id))});
+}
+function failedWrite(result) {
+  if (result.kind==='mismatch') slot.conflicted=true;
+  slot.error=result.kind==='mismatch'
+    ? 'Storage changed during saving; automatic writes are paused.'
+    : 'Saving could not be verified. Storage may have changed.';
+  showSaveStatus();
 }
 function save() {
-  if (blocked) return;
-  try { localStorage.setItem(storageKey(world.id),JSON.stringify(state)); }
-  catch { status('Browser storage is unavailable. Export your run before leaving.'); }
+  slot.state=state;
+  if (blocked) {showSaveStatus();return false;}
+  try {
+    // This detects observations, not atomic compare-and-swap or cross-tab locks.
+    if (slot.conflicted || localStorage.getItem(storageKey(world.id))!==slot.expected) {
+      slot.conflicted=true;
+      slot.error='Another saved version was observed; automatic writes are paused.';
+      showSaveStatus();return false;
+    }
+    const raw=JSON.stringify(state),result=writeSave(raw);
+    if (!result.ok) {failedWrite(result);return false;}
+    slot.expected=raw;slot.error='';showSaveStatus();return true;
+  } catch {
+    slot.error='Browser storage is unavailable.';
+    showSaveStatus();return false;
+  }
+}
+function adoptSaved(next,raw) {
+  state=next;blocked=false;resetArmed=false;
+  Object.assign(slot,{state,expected:raw,raw,blocked:false,conflicted:false,error:''});
+  $('reset').textContent='Reset this world';
 }
 function el(tag,cls,text) {
   const node=document.createElement(tag);
@@ -33,12 +79,9 @@ function lineRow(name,description) {
 }
 function installWorld(next) {
   world=next;
-  blocked=false;
+  slot=readSaved(world);state=slot.state;blocked=slot.blocked;
   resetArmed=false;
-  try { state=readSaved(world); }
-  catch (error) {
-    blocked=true;
-    state=newRun(world,Date.now());
+  if (blocked) {
     status(`This ${world.label} save cannot be read. It has NOT been replaced. Export it or explicitly clear it to start again.`);
   }
   $('objectives-section').hidden=!world.prestigeObjectives;
@@ -88,9 +131,11 @@ function act(result,acceptedText) {
 function render() {
   if (blocked) {
     $('tap').disabled=true;$('prestige').disabled=true;
+    for (const id of ['banked','rate','tap-yield','run-produced','all-time','prestige-points']) $(id).textContent='Unavailable';
+    $('prestige').textContent='Load a valid save to replant';
     for(const b of btns.producers.values()) if(b.tagName==='BUTTON') b.disabled=true;
     for(const b of btns.upgrades.values()) b.disabled=true;
-    return;
+    showSaveStatus();return;
   }
   const view=project(world,state,Date.now());
   state=view.state;
@@ -130,20 +175,30 @@ $('tap').addEventListener('click',()=>{ if(!blocked) {const outcome=tap(world,st
 $('prestige').addEventListener('click',()=>{ if(!blocked) { const outcome=prestige(world,state,Date.now()); act(outcome,outcome.accepted?`Replanted. +${outcome.awarded} permanent sparks; next run is faster.`:''); }});
 $('reset').addEventListener('click',()=>{
   if(!resetArmed){resetArmed=true;$('reset').textContent='Confirm: erase this world';status('Press Confirm to erase this world’s local progress. Other worlds are unaffected.');return;}
-  try {localStorage.removeItem(storageKey(world.id));blocked=false;state=newRun(world,Date.now());resetArmed=false;}
-  catch {status('Could not clear browser storage.');return;}
+  const fresh=newRun(world,Date.now()),raw=JSON.stringify(fresh),result=writeSave(raw);
+  if(!result.ok){failedWrite(result);status('Reset could not be verified. No replacement was adopted; storage may have changed.');return;}
+  adoptSaved(fresh,raw);
   installWorld(world);status('This world was reset on this device.');
 });
 $('export').addEventListener('click',()=>{
-  try {const raw=localStorage.getItem(storageKey(world.id));$('save-data').value=raw??JSON.stringify(state);
-    $('save-data').focus();$('save-data').select();status('Save copied into the text field; copy it somewhere safe.');}
-  catch {status('Browser storage unavailable.');}
+  try {
+    // Never export stale persisted bytes in place of an admitted live run.
+    // A blocked placeholder is not progress and must never be exported as such.
+    const raw=blocked ? slot.raw ?? localStorage.getItem(storageKey(world.id)) : JSON.stringify(state);
+    if(raw===null) throw new Error('No original save text is available');
+    $('save-data').value=raw;$('save-data').focus();$('save-data').select();
+    status(blocked?'Original unreadable save text is in the field; copy it before replacing it.':'Current live run is in the field; copy it somewhere safe. This does not save it automatically.');
+  } catch {status('Original save text is unavailable. No replacement or empty run was exported.');}
 });
 $('import').addEventListener('click',()=>{
-  try {const parsed=admitRun(world,JSON.parse($('save-data').value));
-    localStorage.setItem(storageKey(world.id),JSON.stringify(parsed));blocked=false;state=parsed;
-    installWorld(world);status('Save imported for this world.');}
-  catch {status('Import refused. The original save has not been changed.');}
+  let parsed;
+  try {parsed=admitRun(world,JSON.parse($('save-data').value));}
+  catch {status('Import refused. No save was written and the current run is unchanged.');return;}
+  const raw=JSON.stringify(parsed),result=writeSave(raw);
+  if(!result.ok){failedWrite(result);status('Import could not be verified. No replacement was adopted; storage may have changed.');return;}
+  // The candidate is already admitted; do not reload storage and replace it
+  // with a blocked placeholder if a later read fails.
+  adoptSaved(parsed,raw);render();status('Save imported for this world.');
 });
 installWorld(world);
 setInterval(()=>{if(!blocked)render();},1000);

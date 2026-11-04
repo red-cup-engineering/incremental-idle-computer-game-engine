@@ -19,6 +19,15 @@ This remains private version 0.1.0. Adding an import surface does not publish it
 
 The `/engine`, `/worlds`, and `/transactions` runtime entrances require the declared Computer Data supplier and do not require JSNode. Generation and static build are separate tooling entrances: a consumer selecting them must install the exact JSNode version declared in `peerDependencies`. This peer is optional for core-only consumers and retained in `devDependencies` for this package's own development. Selecting a tooling entrance without that supplier fails; optional does not mean generation works without it. A title using the generator should declare the same exact JSNode development dependency and receive its actual installed producer identity. The static build remains the two-world Little Worlds app, not a Mutualist title or a browser adapter for resource transactions.
 
+The Little Worlds browser and its static build also select gamehouse's existing
+`/verified-save-write` entry. This is a separate optional peer for those entries,
+not an engine, worlds or transactions dependency. The source checkout pins the
+six-file, zero-dependency supplier as an exact development artifact. The build
+copies only its resolved save helper into the browser graph and records its hash.
+It does not load a house aggregator or any other game engine. Core-only consumers
+need neither browser supplier. See [browser recovery](design/browser-recovery.md)
+for its exact provenance, player contract and non-atomic limits.
+
 ## Bounded active-time settlement
 
 `advance(world, run, nowMs)` remains the ordinary offline-clock operation: it caps
@@ -127,6 +136,12 @@ separate contracts.
 - Observed time is injected into pure source transitions; complete seconds accrue while the tab is closed, capped at each world's clearly disclosed offline maximum. A clock moving backwards cannot create output.
 - Replanting spends accumulated run progress to award permanent sparks; production and manual actions improve afterward while per-run producers/upgrades reset.
 - Invalid/incompatible saved state fails closed. A broken save is **not silently overwritten**; the player can export the raw bytes and explicitly clear it, or import an earlier saved JSON. No local browser save is authoritative value.
+- Admitted live runs remain in this page while switching worlds, including when
+  storage fails. Export uses that live run, not an older stored copy. Persistent
+  warnings identify worlds needing export before closing; these drafts are not
+  durable backups. Import/reset adopt replacement state only after an exact save
+  readback. Observed conflicts pause automatic writes without discarding the live
+  run. This is not atomic cross-tab synchronization; use one tab per world.
 - Responsive, keyboard-operable, reduced-motion friendly; no external JS, CDN, client analytics, ad callbacks, social pressure, artificial playcounts or payment interfaces.
 
 **Owners and boundaries.** Computer Data owns the generic safe-integer and discrete time quantization source. This package owns only game-specific state, progression and consumer UI. Metrologic/SignCell/SignChain/SignGraph/SignCraft are neither clocks nor pretend financial ledgers. `games-host` is the existing native HTTP game supervisor if a competent host operator later selects this static site; this package does not duplicate it.
