@@ -27,6 +27,9 @@ test('native publisher produces a self-contained, offline-capable two-world brow
     assert.equal(active.state.lastMs,60137);
     assert.equal(runtime.advanceActive(activeWorld,active.state,60637,61137).gained,1);
     assert.throws(()=>runtime.advanceActive(activeWorld,start,137,60138),/time cap/);
+    const forecast=runtime.forecastProduction(activeWorld,{...start,producers:{...start.producers,pencil:1}},2,637,2637);
+    assert.deepEqual(forecast,{missing:2,rate:1,waitMs:1500,reachable:true,readyAtMs:2137});
+    assert.equal(runtime.advanceActive(activeWorld,{...start,producers:{...start.producers,pencil:1}},637,forecast.readyAtMs).state.banked,2);
     const headers=await readFile(join(out,'_headers'),'utf8');
     assert.match(headers,/connect-src 'none'/);
     const receipt=JSON.parse(await readFile(join(out,'fabrication-receipt.json'),'utf8'));
