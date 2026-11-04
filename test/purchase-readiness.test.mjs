@@ -172,7 +172,7 @@ for(const [target,entry] of targets) {
           assert.equal(node.getAttribute('id'),`readiness-${definitions[i].id}`);
           assert.equal(node.getAttribute('aria-live'),null);
           const buttons=type==='producers'?row(app,type,i).children[1].children.filter(node=>node.tagName==='BUTTON'):[upgradeButton(app,i)];
-          for(const button of buttons)assert.equal(button.getAttribute('aria-describedby'),node.getAttribute('id'));
+          for(const button of buttons)assert.ok(button.getAttribute('aria-describedby').split(' ').includes(node.getAttribute('id')));
         }
       }
     }));
