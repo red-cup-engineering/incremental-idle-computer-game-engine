@@ -9,6 +9,16 @@
 
 Red Cup Engineering's reusable **typed, declarative incremental-game engine** and a genuinely playable, zero-custody browser consumer. It builds two independent, original local-only worlds: **Trace Garden** and **Pocket Observatory**. Neither is a mining service, advertisement, money-like reward, blockchain game or public account system.
 
+## Proposed package consumer contract
+
+The engine exposes three named ESM entrances: `@red-cup-engineering/incremental-idle-game/engine`, `/worlds`, and `/transactions`. They alias the existing source modules without a second implementation. `spendPoints` in `/transactions` is a clock-free bounded integer-point debit; call the engine's `advance` explicitly when time should pass. Spending does not complete action objectives or create production.
+
+Existing `/src/*`, `/scripts/*`, `/design/*` and `/package.json` paths remain accessible for known consumers. These are compatibility paths, not a promise that every internal file is a stable API. There is no root entrance. The package carrier includes source, authored designs, generation/build tools and native tests. Generated browser output, dependency trees, workflow files, historical qualification records and local artifacts are not package inputs. README and LICENSE remain included by npm.
+
+This remains private version 0.1.0. Adding an import surface does not publish it or choose a release version. A title must receive an owner-issued exact artifact and its normal frozen dependency closure before treating it as the released dependency required by Mutualist Mission. The original Engineering publication owner retains version, channel, integrity and release gates.
+
+The `/engine`, `/worlds`, and `/transactions` runtime entrances require the declared Computer Data supplier and do not require JSNode. Generation and static build are separate tooling entrances: a consumer selecting them must install the exact JSNode version declared in `peerDependencies`. This peer is optional for core-only consumers and retained in `devDependencies` for this package's own development. Selecting a tooling entrance without that supplier fails; optional does not mean generation works without it. A title using the generator should declare the same exact JSNode development dependency and receive its actual installed producer identity. The static build remains the two-world Little Worlds app, not a Mutualist title or a browser adapter for resource transactions.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
