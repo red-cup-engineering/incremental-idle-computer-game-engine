@@ -284,14 +284,35 @@ export function buyProducer(world,candidate,id,requested,nowMs) {
     state:recordAction(world,{...state,banked:plan.balance,producers:{...state.producers,[id]:plan.owned}},'buy-producer',id,plan.count)};
 }
 
+// Preserve command refusal precedence and debit in one clock-free planner.
+function planUpgradePurchase(world,state,id) {
+  const upgrade=world.upgrades.find(x=>x.id===id);
+  if (!upgrade) return {accepted:false,reason:'unknown-upgrade'};
+  if (state.upgrades[id]) return {accepted:false,reason:'already-owned'};
+  if (state.runProduced<upgrade.unlockAt) return {accepted:false,reason:'locked'};
+  if (state.banked<upgrade.cost) return {accepted:false,reason:'insufficient-points'};
+  return {accepted:true,spent:upgrade.cost,balance:state.banked-upgrade.cost};
+}
+
+/** Quote one upgrade against an admitted balance without advancing time,
+ * awarding objectives or returning a speculative state. Output gains use the
+ * native income cap, rounding, existing upgrades and prestige. Settle time
+ * explicitly when needed; a command recomputes rather than trusting a quote.
+ */
+export function quoteUpgradePurchase(world,candidate,id) {
+  const state=admitRun(world,candidate), plan=planUpgradePurchase(world,state,id);
+  if (!plan.accepted) return {...plan,spent:0,rateGain:0,tapGain:0};
+  const after={...state,upgrades:{...state.upgrades,[id]:true}};
+  return {accepted:true,spent:plan.spent,
+    rateGain:incomePerSecond(world,after)-incomePerSecond(world,state),
+    tapGain:tapYield(world,after)-tapYield(world,state)};
+}
+
 export function buyUpgrade(world,candidate,id,nowMs) {
   const previous=advance(world,candidate,nowMs), state=previous.state;
-  const upgrade=world.upgrades.find(x=>x.id===id);
-  if (!upgrade) return {accepted:false,reason:'unknown-upgrade',state};
-  if (state.upgrades[id]) return {accepted:false,reason:'already-owned',state};
-  if (state.runProduced<upgrade.unlockAt) return {accepted:false,reason:'locked',state};
-  if (state.banked<upgrade.cost) return {accepted:false,reason:'insufficient-points',state};
-  return {accepted:true,state:recordAction(world,{...state,banked:state.banked-upgrade.cost,
+  const plan=planUpgradePurchase(world,state,id);
+  if (!plan.accepted) return {...plan,state};
+  return {accepted:true,state:recordAction(world,{...state,banked:plan.balance,
     upgrades:{...state.upgrades,[id]:true}},'buy-upgrade',id,1)};
 }
 

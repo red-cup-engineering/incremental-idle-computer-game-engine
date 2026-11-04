@@ -1,5 +1,5 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quoteProducerPurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -11,7 +11,7 @@ let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=f
 // At most the declared worlds. These page-local runs are not durable backups.
 // Keeping them prevents a failed save followed by a world switch losing play.
 const runs=new Map();
-const btns={producers:new Map(),upgrades:new Map(),readiness:new Map(),previews:new Map()};
+const btns={producers:new Map(),upgrades:new Map(),readiness:new Map(),previews:new Map(),upgradePreviews:new Map()};
 const status = text => { $('status').textContent=text; };
 
 function readSaved(current) {
@@ -121,7 +121,7 @@ function installWorld(next) {
     b.addEventListener('click',()=>{ if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
     menu.append(b);
   }
-  btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();btns.previews.clear();
+  btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();btns.previews.clear();btns.upgradePreviews.clear();
   const producers=$('producers');producers.replaceChildren();
   for(const p of world.producers) {
     const {row,content}=lineRow(p.label,`${format.format(p.ratePerSecond)} ${world.unit} per second each`);
@@ -153,9 +153,12 @@ function installWorld(next) {
   for(const u of world.upgrades) {
     const {row,content}=lineRow(u.label,`${u.effect==='tap'?'Manual': 'Automatic'} improvement`);
     const description=readinessNode(u.id,content);
+    const preview=el('p','purchase-preview');
+    preview.setAttribute('id',`preview-upgrade-${u.id}`);
+    content.append(preview);btns.upgradePreviews.set(u.id,preview);
     const button=el('button','secondary','');button.type='button';
-    button.setAttribute('aria-describedby',description);
-    button.addEventListener('click',()=>act(buyUpgrade(world,state,u.id,Date.now()),`Installed ${u.label}.`));
+    button.setAttribute('aria-describedby',`${description} preview-upgrade-${u.id}`);
+    button.addEventListener('click',()=>act(buyUpgrade(world,state,u.id,Date.now()),`Installed ${u.label} for ${exact.format(u.cost)} ${world.unit}.`));
     row.append(button);upgrades.append(row);btns.upgrades.set(u.id,button);
   }
   render();
@@ -174,6 +177,7 @@ function render() {
     for(const b of btns.upgrades.values()) b.disabled=true;
     for(const node of btns.readiness.values()) node.textContent='Load a valid save to see purchase readiness.';
     for(const node of btns.previews.values()) node.textContent='Load a valid save to preview this batch.';
+    for(const node of btns.upgradePreviews.values()) node.textContent='Load a valid save to preview this upgrade.';
     showSaveStatus();return;
   }
   const now=Date.now(),view=project(world,state,now);
@@ -221,6 +225,12 @@ function render() {
     btns.readiness.get(u.id).textContent=u.owned ? 'Already installed.'
       : u.locked ? `Produce ${format.format(u.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
       : purchaseReadiness(u.cost,now);
+    const quote=quoteUpgradePurchase(world,state,u.id);
+    const gain=u.effect==='tap' ? `+${exact.format(quote.tapGain)} per action`
+      : `+${exact.format(quote.rateGain)} / sec at current inventory`;
+    btns.upgradePreviews.get(u.id).textContent=quote.accepted
+      ? `Upgrade: ${exact.format(quote.spent)} ${world.unit}; ${gain}.${u.effect==='production'&&quote.rateGain===0?' No immediate increase at the current inventory and output limit.':''}`
+      : `Upgrade: ${u.owned?'already installed':u.locked?'locked':'not affordable yet'}.`;
   }
   if(view.discardedSeconds>0) status(`Welcome back! Collected ${format.format(view.gained)} ${world.unit} for ${view.seconds} seconds; time beyond the offline cap was discarded.`);
   save();
