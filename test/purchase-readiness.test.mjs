@@ -63,6 +63,17 @@ for(const [target,entry] of targets) {
       assert.equal(producerButton(app).disabled,false);
       assert.equal(app.saved().banked,12);
     }));
+    await t.test('whole-second estimates stay accurate across minute and hour boundaries',async()=>{
+      const world=WORLDS[0],owned=59,cost=producerPrice(world.producers[0],owned);
+      for(const [ticks,phase,label] of [[59,0,'59s'],[60,0,'1m'],[61,0,'1m 1s'],[3599,0,'59m 59s'],[3600,0,'1h'],[3601,0,'1h 1s'],[3601,999,'1h 1s']]){
+        const state={...newRun(world,now-phase),banked:cost-ticks*owned,allTime:MAX_POINTS,runProduced:MAX_POINTS};state.producers.pencil=owned;
+        assert.ok(state.banked>=0);
+        await run(initial(world,state),app=>{
+          assert.ok(ready(app,'producers').includes(`About ${label} at this rate.`),ready(app,'producers'));
+          assert.deepEqual(JSON.parse(app.export()),state);
+        });
+      }
+    });
     await t.test('locks describe earned-this-run progress even with an imported large balance',()=>{
       const world=WORLDS[0],state={...newRun(world,now),banked:1000,allTime:1000};
       return run(initial(world,state),app=>{

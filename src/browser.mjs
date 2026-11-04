@@ -79,10 +79,8 @@ function lineRow(name,description) {
 }
 function waitLabel(milliseconds) {
   const seconds=Math.ceil(milliseconds/1000);
-  if(seconds<60) return `${seconds}s`;
-  const minutes=Math.ceil(seconds/60);
-  if(minutes<60) return `${minutes}m`;
-  return `${Math.ceil(minutes/60)}h`;
+  const hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
+  return [hours?`${hours}h`:'',minutes?`${minutes}m`:'',rest?`${rest}s`:''].filter(Boolean).join(' ') || '0s';
 }
 function purchaseReadiness(cost,now) {
   if(cost>MAX_POINTS) return 'Price exceeds the balance limit; no further purchase is possible.';
