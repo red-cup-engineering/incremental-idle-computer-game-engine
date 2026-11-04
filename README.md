@@ -143,6 +143,12 @@ clock, and disclose waits longer than one offline collection cap. Buy 10 and Buy
 max retain their original partial-batch behavior (up to 10 and 100); the feedback
 now reports the actual quantity and points spent. See the [presentation contract](design/purchase-readiness.md).
 
+Before buying a batch, each producer also shows how many units Buy 10 or Buy max
+would purchase now, the exact total cost, and the resulting increase in automatic
+production. These are separate alternatives against the same balance, refreshed
+after any purchase. Their previews and actual clicks use the original native
+purchase transition. See [batch previews](design/batch-previews.md).
+
 ## Actual mechanics
 
 - World rules are named typed records, not hardcoded browser conditionals; two different worlds exercise the same engine and save separately.

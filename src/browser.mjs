@@ -1,16 +1,17 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, incomePerSecond, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
 const format = new Intl.NumberFormat('en-US', { maximumFractionDigits:0, notation:'compact' });
+const exact = new Intl.NumberFormat('en-US', { maximumFractionDigits:0 });
 const storageKey = id => `561-incremental-idle:${id}:v1`;
 const pick = new URLSearchParams(location.search).get('world');
 let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=false;
 // At most the declared worlds. These page-local runs are not durable backups.
 // Keeping them prevents a failed save followed by a world switch losing play.
 const runs=new Map();
-const btns={producers:new Map(),upgrades:new Map(),readiness:new Map()};
+const btns={producers:new Map(),upgrades:new Map(),readiness:new Map(),previews:new Map()};
 const status = text => { $('status').textContent=text; };
 
 function readSaved(current) {
@@ -120,7 +121,7 @@ function installWorld(next) {
     b.addEventListener('click',()=>{ if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
     menu.append(b);
   }
-  btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();
+  btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();btns.previews.clear();
   const producers=$('producers');producers.replaceChildren();
   for(const p of world.producers) {
     const {row,content}=lineRow(p.label,`${format.format(p.ratePerSecond)} ${world.unit} per second each`);
@@ -129,10 +130,18 @@ function installWorld(next) {
     const owned=el('span','amount');
     for(const [label,count] of [['Buy 1',1],['Buy 10',10],['Buy max','max']]) {
       const b=el('button','secondary',label);b.type='button';
-      b.setAttribute('aria-describedby',description);
+      let describedBy=description;
+      if(count!==1) {
+        const preview=el('p','purchase-preview');
+        const previewId=`preview-${p.id}-${count}`;
+        preview.setAttribute('id',previewId);
+        content.append(preview);btns.previews.set(`${p.id}:${count}`,preview);
+        describedBy+=` ${previewId}`;
+      }
+      b.setAttribute('aria-describedby',describedBy);
       b.addEventListener('click',()=>{
         const result=buyProducer(world,state,p.id,count,Date.now());
-        act(result,`Purchased ${result.count} × ${p.label} for ${format.format(result.spent)} ${world.unit}.`);
+        act(result,`Purchased ${result.count} × ${p.label} for ${exact.format(result.spent)} ${world.unit}.`);
       });
       controls.append(b);
       btns.producers.set(`${p.id}:${count}`,b);
@@ -164,6 +173,7 @@ function render() {
     for(const b of btns.producers.values()) if(b.tagName==='BUTTON') b.disabled=true;
     for(const b of btns.upgrades.values()) b.disabled=true;
     for(const node of btns.readiness.values()) node.textContent='Load a valid save to see purchase readiness.';
+    for(const node of btns.previews.values()) node.textContent='Load a valid save to preview this batch.';
     showSaveStatus();return;
   }
   const now=Date.now(),view=project(world,state,now);
@@ -194,6 +204,15 @@ function render() {
       : p.locked ? `Produce ${format.format(p.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
       : `Next unit: ${purchaseReadiness(p.nextCost,now)}`;
     for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=MAX_LEVEL || state.banked<p.nextCost;
+    for(const n of [10,'max']) {
+      // The original transition is pure. Preview its result but never adopt or
+      // save it; the actual click recomputes against current state and time.
+      const quote=buyProducer(world,state,p.id,n,now);
+      const label=n==='max'?'Buy max':'Buy 10';
+      btns.previews.get(`${p.id}:${n}`).textContent=quote.accepted
+        ? `${label}: ${quote.count} for ${exact.format(quote.spent)} ${world.unit}; +${exact.format(incomePerSecond(world,quote.state)-view.rate)} / sec.`
+        : `${label}: ${p.locked?'locked':p.owned>=MAX_LEVEL?'level limit reached':'no affordable units yet'}.`;
+    }
   }
   for(const u of view.upgrades) {
     const b=btns.upgrades.get(u.id);
