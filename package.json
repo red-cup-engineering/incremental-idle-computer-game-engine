@@ -26,6 +26,29 @@
     "url": "https://github.com/561-group/.github/blob/main/TIPS.md"
   },
   "devDependencies": {
-    "@red-cup-engineering/jsnode-package-services-section": "git+https://github.com/red-cup-engineering/jsnode-package-engineering-services-section.git#010bc1fa795ac20e426ae8a4c4e9df6db21426f3"
+    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5"
+  },
+  "exports": {
+    "./engine": "./src/engine.mjs",
+    "./worlds": "./src/worlds.mjs",
+    "./transactions": "./src/transactions.mjs",
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
+    "./scripts/*": "./scripts/*",
+    "./design/*": "./design/*"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "design",
+    "test"
+  ],
+  "peerDependencies": {
+    "@red-cup-engineering/jsnode-package-services-section": "0.5.1-dev.5"
+  },
+  "peerDependenciesMeta": {
+    "@red-cup-engineering/jsnode-package-services-section": {
+      "optional": true
+    }
   }
 }
