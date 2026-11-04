@@ -171,13 +171,33 @@ function credit(state, amount) {
     allTime:pointSum(state.allTime,amount)};
 }
 
-export function advance(world, candidate, nowMs) {
-  const state = admitRun(world,candidate);
-  const time = elapsedTicks(state.lastMs, nowMs, {maxElapsedMs:world.offlineCapSeconds*1000});
+function accrueTime(world, state, time) {
   const rate = incomePerSecond(world,state);
   const gained = Math.min(MAX_POINTS, rate*time.ticks);
   return {state:{...credit(state,gained),lastMs:time.nextMs}, gained,
     seconds:time.ticks, discardedSeconds:Math.floor(time.discardedMs/1000)};
+}
+
+export function advance(world, candidate, nowMs) {
+  const state = admitRun(world,candidate);
+  return accrueTime(world,state,elapsedTicks(state.lastMs,nowMs,{maxElapsedMs:world.offlineCapSeconds*1000}));
+}
+
+/** Settle a caller-selected, bounded active interval without discarding a
+ * previously observed fractional tick. The caller owns pauses and wall/logical
+ * time mapping. fromMs is the last active observation, not a new clock origin.
+ * Unlike advance, an oversized or backward active interval is refused.
+ */
+export function advanceActive(world, candidate, fromMs, toMs) {
+  const state = admitRun(world,candidate);
+  boundedNatural(fromMs,'fromMs');
+  boundedNatural(toMs,'toMs');
+  const carriedMs = fromMs-state.lastMs;
+  if (carriedMs<0 || carriedMs>=1000) throw new RangeError('fromMs must retain less than one uncredited second');
+  if (toMs<fromMs) throw new RangeError('active interval must be monotone');
+  const capMs = world.offlineCapSeconds*1000;
+  if (toMs-fromMs>capMs) throw new RangeError('active interval exceeds the world time cap');
+  return accrueTime(world,state,elapsedTicks(state.lastMs,toMs,{maxElapsedMs:capMs+carriedMs}));
 }
 
 export function tap(world,candidate,nowMs) {

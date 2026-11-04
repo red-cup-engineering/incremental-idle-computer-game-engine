@@ -19,6 +19,44 @@ This remains private version 0.1.0. Adding an import surface does not publish it
 
 The `/engine`, `/worlds`, and `/transactions` runtime entrances require the declared Computer Data supplier and do not require JSNode. Generation and static build are separate tooling entrances: a consumer selecting them must install the exact JSNode version declared in `peerDependencies`. This peer is optional for core-only consumers and retained in `devDependencies` for this package's own development. Selecting a tooling entrance without that supplier fails; optional does not mean generation works without it. A title using the generator should declare the same exact JSNode development dependency and receive its actual installed producer identity. The static build remains the two-world Little Worlds app, not a Mutualist title or a browser adapter for resource transactions.
 
+## Bounded active-time settlement
+
+`advance(world, run, nowMs)` remains the ordinary offline-clock operation: it caps
+unobserved time, discards excess history and tolerates backward observations
+without minting points. Its save contract and behavior are unchanged.
+
+`advanceActive(world, run, fromMs, toMs)`, from the same `/engine` entrance, settles
+an explicitly selected active logical interval. This is useful when a title pauses
+production between rounds but retains the fractional tick already observed before
+the pause. For example, 500 ms retained plus 60,000 ms of new active time produces
+60 whole seconds and keeps the 500 ms phase. Passing that combined 60,500 ms to an
+ordinary 60-second capped offline advance would instead discard the fraction.
+
+Contract:
+- Both times are nonnegative safe integer milliseconds. `fromMs` is the previous
+  active observation and must satisfy `0 <= fromMs - run.lastMs < 1000`.
+- `toMs >= fromMs`, and the new interval `toMs - fromMs` must be no longer than
+  `world.offlineCapSeconds * 1000`. Invalid, stale, backward and oversized active
+  intervals throw before returning a changed state. Use ordinary `advance` when
+  truncating an arbitrary offline gap is intended.
+- The result has the ordinary `{state, gained, seconds, discardedSeconds}` shape.
+  Whole ticks use the existing Computer Data quantizer and native production
+  credit. The result preserves the subsecond phase and has `discardedSeconds: 0`.
+  Zero intervals award nothing. Inventories/objective progress are detached;
+  state kinds, point saturation, action objectives and native prestige are unchanged.
+- The caller owns which time is active, its wall/logical mapping, observation
+  storage and pause/resume policy. This function neither reads a clock nor invents
+  a deadline, pause, round, reward or save field. Keep passing the returned state
+  and actual previous active observation; this is arithmetic, not authenticated
+  evidence of time spent playing. Sparse/dense equivalence assumes no intervening
+  change in production rate, as with the original discrete-tick engine.
+
+`test/active-interval.test.mjs` checks every millisecond phase, bounded composition,
+sparse/dense observations, native purchase/reset composition, isolation, objectives,
+saturation, invalid intervals and safe-integer endpoints. The first consumer is
+Mission: Mutualist's title-owned logical production clock; it can replace its two
+manual `advance` calls without moving season rules into the engine.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
