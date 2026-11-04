@@ -134,6 +134,21 @@ unchanged. This additive API does not publish a package or update an external
 title's pinned artifact. See `design/purchase-quotes.md` for the boundary and
 native/consumer receiving obligations.
 
+## Exact upgrade alternatives
+
+`quoteUpgradePurchase(world, run, id)` from `/engine` reports the exact affordable
+upgrade price and immediate production/tap gains without advancing time or
+changing the run. It returns `{accepted:true, spent, rateGain, tapGain}`, or the
+existing command refusal reason with zero metrics. It uses the same planner as
+`buyUpgrade`, which still settles time and recomputes at the actual action.
+
+Both Little Worlds show these quotes alongside purchase readiness. Production
+gains include current inventory, additive bonuses, rounding and the output cap;
+a listed percentage is not necessarily that percentage of current output.
+Buying one choice changes the others. Quotes do not reserve funds, grant
+objectives, simulate future purchases or replace saved runs. Old pinned title
+artifacts remain unchanged. See `design/upgrade-quotes.md` for the full contract.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
