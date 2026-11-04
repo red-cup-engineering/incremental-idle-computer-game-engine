@@ -30,6 +30,12 @@ for its exact provenance, player contract and non-atomic limits.
 
 ## Bounded active-time settlement
 
+Producer prices use exact per-level integer ceiling, including late-game quotes
+whose basis-point multiplication exceeds Number precision. Existing saved
+balances and inventory are preserved; only future quotes/debits are corrected.
+See [exact producer prices](design/exact-producer-prices.md) for saved-play and
+custom-objective compatibility, regression cases and consumer qualification.
+
 `advance(world, run, nowMs)` remains the ordinary offline-clock operation: it caps
 unobserved time, discards excess history and tolerates backward observations
 without minting points. Its save contract and behavior are unchanged.

@@ -148,12 +148,15 @@ export function admitRun(world, state) {
 
 export function producerPrice(producer, owned) {
   boundedNatural(owned, 'owned', MAX_LEVEL);
-  let price = producer.baseCost;
+  // Admitted prices are safe integers, but the basis-point product can exceed
+  // Number's exact range. Round the integer recurrence before converting back.
+  let price = BigInt(producer.baseCost);
+  const growth = BigInt(producer.growthBasisPoints), cap = BigInt(MAX_POINTS);
   for (let n=0; n<owned; n++) {
-    price = Math.ceil(price * producer.growthBasisPoints / 10000);
-    if (price > MAX_POINTS) return MAX_POINTS + 1;
+    price = (price * growth + 9999n) / 10000n;
+    if (price > cap) return MAX_POINTS + 1;
   }
-  return price;
+  return Number(price);
 }
 
 export function incomePerSecond(world, state) {
