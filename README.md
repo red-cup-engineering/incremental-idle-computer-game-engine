@@ -57,6 +57,37 @@ saturation, invalid intervals and safe-integer endpoints. The first consumer is
 Mission: Mutualist's title-owned logical production clock; it can replace its two
 manual `advance` calls without moving season rules into the engine.
 
+## Bounded production readiness
+
+`forecastProduction(world, run, target, fromMs, toMs)` is a pure bank-target quote
+from `/engine`. It uses the same admitted run and selected active interval as
+`advanceActive`, including retained fractional tick phase and the world time cap.
+It does not advance the run, spend points, record an action or choose a deadline.
+
+The result is `{missing, rate, waitMs, reachable, readyAtMs}`:
+- `target` is the desired absolute bank balance, a nonnegative safe integer.
+  `missing` is its current shortfall; `rate` is the existing native income rate.
+- `waitMs` estimates the active duration required at that unchanged rate. It may
+  exceed the selected interval. It is `null` for zero-income deficits, targets
+  above `MAX_POINTS`, or durations that cannot be represented as safe integers.
+  This estimate does not authorize credit beyond a cap or title-owned window.
+- `reachable` says whether that target can be reached inside the inclusive
+  interval `[fromMs, toMs]`. Only then is `readyAtMs` the earliest safe native
+  logical timestamp that reaches it; otherwise `readyAtMs` is `null`.
+  An already-funded target is ready at `fromMs`, even with no income or duration.
+- No purchase, rate change, manual input, spending, pause or reward is forecast.
+  Recompute after any of those changes. The caller still owns wall/logical time
+  mapping, effort, scheduling, strict deadlines and eligibility. In particular,
+  a title requiring readiness *before* its deadline must reject equality itself.
+  An aggregate bank target is not a proof that a sequence of purchases is possible.
+
+The first consumer is Mutualist's funded delivery scheduler and budget previews,
+which otherwise repeat tick-phase and income arithmetic. Tests compare earliest
+readiness with actual `advanceActive` at the quoted time and one millisecond
+before it, including all 1,000 phases, saturation, safe-time boundaries, native
+purchases/resets and both shipped worlds. Existing transition and save behavior
+is unchanged; this is an additional read-only capability.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:

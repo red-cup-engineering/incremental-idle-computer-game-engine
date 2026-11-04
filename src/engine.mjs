@@ -188,7 +188,7 @@ export function advance(world, candidate, nowMs) {
  * time mapping. fromMs is the last active observation, not a new clock origin.
  * Unlike advance, an oversized or backward active interval is refused.
  */
-export function advanceActive(world, candidate, fromMs, toMs) {
+function admitActiveInterval(world, candidate, fromMs, toMs) {
   const state = admitRun(world,candidate);
   boundedNatural(fromMs,'fromMs');
   boundedNatural(toMs,'toMs');
@@ -197,7 +197,36 @@ export function advanceActive(world, candidate, fromMs, toMs) {
   if (toMs<fromMs) throw new RangeError('active interval must be monotone');
   const capMs = world.offlineCapSeconds*1000;
   if (toMs-fromMs>capMs) throw new RangeError('active interval exceeds the world time cap');
+  return {state,carriedMs,capMs};
+}
+
+export function advanceActive(world, candidate, fromMs, toMs) {
+  const {state,carriedMs,capMs}=admitActiveInterval(world,candidate,fromMs,toMs);
   return accrueTime(world,state,elapsedTicks(state.lastMs,toMs,{maxElapsedMs:capMs+carriedMs}));
+}
+
+/** Read-only bank-target readiness at the current production rate. The active
+ * interval has exactly advanceActive's admission contract. waitMs estimates the
+ * required active duration, even beyond that interval; only reachable/readyAtMs
+ * attest that the selected interval suffices. No clock, credit, purchase, pause
+ * policy or deadline is chosen here. Targets above the balance cap cannot be
+ * reached. Unsafe duration estimates are null, never rounded timestamps.
+ */
+export function forecastProduction(world,candidate,target,fromMs,toMs) {
+  const {state,carriedMs}=admitActiveInterval(world,candidate,fromMs,toMs);
+  boundedNatural(target,'target');
+  const missing=Math.max(0,target-state.banked),rate=incomePerSecond(world,state);
+  let waitMs=null;
+  if(missing===0) waitMs=0;
+  else if(target<=MAX_POINTS && rate>0) {
+    // Exact quotient and duration avoid rounded-up division at integer limits.
+    // Credit itself continues to use the existing native rate and saturation.
+    const ticks=(BigInt(missing)+BigInt(rate)-1n)/BigInt(rate);
+    const duration=ticks*1000n-BigInt(carriedMs);
+    if(duration<=BigInt(Number.MAX_SAFE_INTEGER)) waitMs=Number(duration);
+  }
+  const reachable=waitMs!==null && waitMs<=toMs-fromMs;
+  return {missing,rate,waitMs,reachable,readyAtMs:reachable?fromMs+waitMs:null};
 }
 
 export function tap(world,candidate,nowMs) {
