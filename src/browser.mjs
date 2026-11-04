@@ -1,5 +1,5 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -10,7 +10,7 @@ let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=f
 // At most the declared worlds. These page-local runs are not durable backups.
 // Keeping them prevents a failed save followed by a world switch losing play.
 const runs=new Map();
-const btns={producers:new Map(),upgrades:new Map()};
+const btns={producers:new Map(),upgrades:new Map(),readiness:new Map()};
 const status = text => { $('status').textContent=text; };
 
 function readSaved(current) {
@@ -77,6 +77,27 @@ function lineRow(name,description) {
   row.append(content);
   return {row,content};
 }
+function waitLabel(milliseconds) {
+  const seconds=Math.ceil(milliseconds/1000);
+  const hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
+  return [hours?`${hours}h`:'',minutes?`${minutes}m`:'',rest?`${rest}s`:''].filter(Boolean).join(' ') || '0s';
+}
+function purchaseReadiness(cost,now) {
+  if(cost>MAX_POINTS) return 'Price exceeds the balance limit; no further purchase is possible.';
+  if(cost<=state.banked) return 'Ready now.';
+  const shortfall=`${format.format(cost-state.banked)} ${world.unit} short.`;
+  if(now<state.lastMs) return `${shortfall} Idle estimate paused until the device clock catches up.`;
+  const quote=forecastProduction(world,state,cost,now,Math.min(Number.MAX_SAFE_INTEGER,now+world.offlineCapSeconds*1000));
+  if(quote.rate===0) return `${shortfall} Use “${world.verb}” to earn more.`;
+  if(quote.waitMs===null) return `${shortfall} No safe idle-time estimate is available.`;
+  return `${shortfall} About ${waitLabel(quote.waitMs)} at this rate${quote.waitMs>world.offlineCapSeconds*1000?' (beyond one offline collection cap)':''}.`;
+}
+function readinessNode(id,content) {
+  const node=el('p','purchase-readiness');
+  node.setAttribute('id',`readiness-${id}`);
+  content.append(node);btns.readiness.set(id,node);
+  return `readiness-${id}`;
+}
 function installWorld(next) {
   world=next;
   slot=readSaved(world);state=slot.state;blocked=slot.blocked;
@@ -99,15 +120,20 @@ function installWorld(next) {
     b.addEventListener('click',()=>{ if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
     menu.append(b);
   }
-  btns.producers.clear();btns.upgrades.clear();
+  btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();
   const producers=$('producers');producers.replaceChildren();
   for(const p of world.producers) {
-    const {row}=lineRow(p.label,`${format.format(p.ratePerSecond)} ${world.unit} per second each`);
+    const {row,content}=lineRow(p.label,`${format.format(p.ratePerSecond)} ${world.unit} per second each`);
+    const description=readinessNode(p.id,content);
     const controls=el('div','purchase-controls');
     const owned=el('span','amount');
     for(const [label,count] of [['Buy 1',1],['Buy 10',10],['Buy max','max']]) {
       const b=el('button','secondary',label);b.type='button';
-      b.addEventListener('click',()=>act(buyProducer(world,state,p.id,count,Date.now()),`Purchased ${p.label}.`));
+      b.setAttribute('aria-describedby',description);
+      b.addEventListener('click',()=>{
+        const result=buyProducer(world,state,p.id,count,Date.now());
+        act(result,`Purchased ${result.count} × ${p.label} for ${format.format(result.spent)} ${world.unit}.`);
+      });
       controls.append(b);
       btns.producers.set(`${p.id}:${count}`,b);
     }
@@ -116,8 +142,10 @@ function installWorld(next) {
   }
   const upgrades=$('upgrades');upgrades.replaceChildren();
   for(const u of world.upgrades) {
-    const {row}=lineRow(u.label,`${u.effect==='tap'?'Manual': 'Automatic'} improvement`);
+    const {row,content}=lineRow(u.label,`${u.effect==='tap'?'Manual': 'Automatic'} improvement`);
+    const description=readinessNode(u.id,content);
     const button=el('button','secondary','');button.type='button';
+    button.setAttribute('aria-describedby',description);
     button.addEventListener('click',()=>act(buyUpgrade(world,state,u.id,Date.now()),`Installed ${u.label}.`));
     row.append(button);upgrades.append(row);btns.upgrades.set(u.id,button);
   }
@@ -135,9 +163,10 @@ function render() {
     $('prestige').textContent='Load a valid save to replant';
     for(const b of btns.producers.values()) if(b.tagName==='BUTTON') b.disabled=true;
     for(const b of btns.upgrades.values()) b.disabled=true;
+    for(const node of btns.readiness.values()) node.textContent='Load a valid save to see purchase readiness.';
     showSaveStatus();return;
   }
-  const view=project(world,state,Date.now());
+  const now=Date.now(),view=project(world,state,now);
   state=view.state;
   $('banked').textContent=format.format(state.banked);
   $('rate').textContent=`${format.format(view.rate)} / sec`;
@@ -158,15 +187,21 @@ function render() {
   }
   $('offline-rule').textContent=`Offline collection: up to ${world.offlineCapSeconds/3600} hours per return. Progress stays on this device.`;
   for(const p of view.producers) {
-    const visible=p.locked ? `Unlocks at ${format.format(p.unlockAt)} produced` : `${format.format(p.nextCost)} ${world.unit} next`;
+    const visible=p.owned>=MAX_LEVEL ? 'Level limit reached' : p.locked ? `Unlocks at ${format.format(p.unlockAt)} produced` : `${format.format(p.nextCost)} ${world.unit} next`;
     btns.producers.get(`${p.id}:owned`).textContent=`Owned ${p.owned}`;
     btns.producers.get(`${p.id}:cost`).textContent=visible;
-    for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=1000 || state.banked<p.nextCost;
+    btns.readiness.get(p.id).textContent=p.owned>=MAX_LEVEL ? `Maximum owned (${MAX_LEVEL}).`
+      : p.locked ? `Produce ${format.format(p.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
+      : `Next unit: ${purchaseReadiness(p.nextCost,now)}`;
+    for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=MAX_LEVEL || state.banked<p.nextCost;
   }
   for(const u of view.upgrades) {
     const b=btns.upgrades.get(u.id);
     b.textContent=u.owned?'Installed':u.locked?`Unlocks at ${format.format(u.unlockAt)}`:`Buy for ${format.format(u.cost)} ${world.unit}`;
     b.disabled=u.owned || u.locked || state.banked<u.cost;
+    btns.readiness.get(u.id).textContent=u.owned ? 'Already installed.'
+      : u.locked ? `Produce ${format.format(u.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
+      : purchaseReadiness(u.cost,now);
   }
   if(view.discardedSeconds>0) status(`Welcome back! Collected ${format.format(view.gained)} ${world.unit} for ${view.seconds} seconds; time beyond the offline cap was discarded.`);
   save();

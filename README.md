@@ -128,6 +128,15 @@ compatibility boundary. These are deterministic data projections; algorithm
 synthesis, isolated inference assays and production activation retain their
 separate contracts.
 
+## Purchase readiness
+
+Each producer shows readiness for its next single unit; upgrades show their own
+shortfall and estimated wait at the current automatic rate. Locked items instead
+show the production still needed this run. Estimates pause for a backward device
+clock, and disclose waits longer than one offline collection cap. Buy 10 and Buy
+max retain their original partial-batch behavior (up to 10 and 100); the feedback
+now reports the actual quantity and points spent. See the [presentation contract](design/purchase-readiness.md).
+
 ## Actual mechanics
 
 - World rules are named typed records, not hardcoded browser conditionals; two different worlds exercise the same engine and save separately.
