@@ -164,9 +164,12 @@ export function producerPrice(producer, owned) {
 }
 
 export function incomePerSecond(world, state) {
-  const base = world.producers.reduce((sum,p)=>sum+p.ratePerSecond*state.producers[p.id],0);
+  // Each admitted input is a safe integer; their products need not be. Keep
+  // the aggregate and percentage exact, floor once, then return a capped Number.
+  const base = world.producers.reduce((sum,p)=>sum+BigInt(p.ratePerSecond)*BigInt(state.producers[p.id]),0n);
   const bonusPercent = world.upgrades.reduce((sum,u)=>sum+(state.upgrades[u.id] && u.effect==='production' ? u.amount : 0), 0);
-  return Math.min(MAX_POINTS, Math.floor(base * (100+bonusPercent+state.prestige*20) / 100));
+  const rate = base * BigInt(100+bonusPercent+state.prestige*20) / 100n;
+  return rate >= BigInt(MAX_POINTS) ? MAX_POINTS : Number(rate);
 }
 
 export function tapYield(world, state) {

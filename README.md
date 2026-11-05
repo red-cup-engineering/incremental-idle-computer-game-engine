@@ -30,6 +30,14 @@ for its exact provenance, player contract and non-atomic limits.
 
 ## Bounded active-time settlement
 
+Automatic production floors the exact aggregate producer income and percentage
+bonus before applying the point cap. Even admitted safe-integer rates can have
+unsafe intermediate products; these cannot add or lose a point or reach the cap
+early. Existing saves retain their recorded balances and inventory. Future
+production, readiness and purchase previews use the corrected shared rule. See
+[exact production](design/exact-production.md) for the arithmetic and receiving
+contract. The two shipped world designs and save formats are unchanged.
+
 Producer prices use exact per-level integer ceiling, including late-game quotes
 whose basis-point multiplication exceeds Number precision. Existing saved
 balances and inventory are preserved; only future quotes/debits are corrected.
