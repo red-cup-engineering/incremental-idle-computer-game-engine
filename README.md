@@ -237,3 +237,5 @@ purchase transition. See [batch previews](design/batch-previews.md).
 **Owners and boundaries.** Computer Data owns the generic safe-integer and discrete time quantization source. This package owns only game-specific state, progression and consumer UI. Metrologic/SignCell/SignChain/SignGraph/SignCraft are neither clocks nor pretend financial ledgers. `games-host` is the existing native HTTP game supervisor if a competent host operator later selects this static site; this package does not duplicate it.
 
 **Receiving boundary.** `npm test` and `npm run build` exercise the source and static browser artifact. They do not prove the package version is published, a Cloudflare/Cold Red Gate host has selected these assets, or that a public user has played. No production route is declared here.
+
+Runtime world admission requires string identities and dense record arrays in both direct engine and authored-design use. See [world admission](design/world-admission.md) for the boundary, intentional refusal of malformed custom definitions, and source/built consumer checks.
