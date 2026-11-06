@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { cp, mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
 import * as transactions from '@red-cup-engineering/incremental-idle-game/transactions';
 import { WORLDS } from '@red-cup-engineering/incremental-idle-game/worlds';
@@ -13,7 +15,8 @@ test('package entrances are aliases to the original modules, not duplicate state
   assert.equal(transactions, legacyTransactions);
   assert.equal(engine.defineWorld, legacyEngine.defineWorld);
   assert.equal(typeof transactions.spendPoints, 'function');
-  assert.deepEqual(WORLDS.map(world => world.id), ['trace-garden', 'pocket-observatory']);
+  assert.ok(WORLDS.length > 0);
+  for (const world of WORLDS) assert.equal(engine.tap(world, engine.newRun(world, 1000), 1000).accepted, true);
 });
 
 test('package contract carries authored runtime, design, tools and native receiving files', async () => {
@@ -30,7 +33,8 @@ test('package contract carries authored runtime, design, tools and native receiv
 test('generation tooling declares its exact optional peer without expanding the core runtime contract', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
   const supplier = '@red-cup-engineering/jsnode-package-services-section';
-  assert.equal(manifest.devDependencies[supplier], '0.5.1-dev.5');
+  const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url)));
+  assert.equal(manifest.devDependencies[supplier], lock.packages[`node_modules/${supplier}`].version);
   assert.equal(manifest.peerDependencies[supplier], manifest.devDependencies[supplier]);
   assert.deepEqual(manifest.peerDependenciesMeta[supplier], {optional: true});
   assert.equal(Object.hasOwn(manifest.dependencies, supplier), false);
@@ -40,25 +44,70 @@ test('generation tooling declares its exact optional peer without expanding the 
   assert.equal(manifest.scripts['check:generated'], 'node scripts/generate-worlds.mjs --check');
 });
 
-test('browser custody selects a tiny optional supplier without adding an engine runtime dependency', async () => {
+test('browser save supplier is optional and runs standalone with write/readback failure semantics', async t => {
   const manifest=JSON.parse(await readFile(new URL('../package.json',import.meta.url)));
   const supplier='@red-cup-engineering/computer-game-systems-engineering-services-section';
-  assert.equal(manifest.peerDependencies[supplier],'0.1.1');
+  const lock=JSON.parse(await readFile(new URL('../package-lock.json',import.meta.url)));
+  assert.equal(manifest.peerDependencies[supplier],lock.packages[`node_modules/${supplier}`].version);
   assert.deepEqual(manifest.peerDependenciesMeta[supplier],{optional:true});
-  assert.equal(manifest.devDependencies[supplier],'file:artifacts/gamehouse-verified-save-3e548251.tgz');
+  assert.equal(manifest.devDependencies[supplier],lock.packages[''].devDependencies[supplier]);
   assert.equal(Object.hasOwn(manifest.dependencies,supplier),false);
   const entry=new URL(import.meta.resolve(`${supplier}/verified-save-write`));
   const owner=JSON.parse(await readFile(new URL('../package.json',entry)));
   assert.equal(owner.name,supplier);
   assert.deepEqual(owner.dependencies??{},{});
   assert.deepEqual(owner.peerDependencies??{},{});
-  const helper=await readFile(entry,'utf8');
-  assert.equal(createHash('sha256').update(helper).digest('hex'),'fe0bfb8a06e7864a1302abc3a0bac5a5de62a344a12c3011f0f1fc9df1ba09f7');
-  assert.doesNotMatch(helper,/\bimport\b/);
-  for(const name of ['engine.mjs','worlds.mjs','transactions.mjs']) {
-    const source=await readFile(new URL(`../src/${name}`,import.meta.url),'utf8');
-    assert.equal(source.includes(supplier),false);
+  const isolated=await mkdtemp(join(tmpdir(),'idle-save-contract-'));
+  t.after(()=>rm(isolated,{recursive:true,force:true}));
+  await cp(entry,join(isolated,'save.mjs'));
+  const {writeVerifiedSave}=await import(pathToFileURL(join(isolated,'save.mjs')).href);
+  const text='{"world":"κόσμος","banked":7}';
+  const calls=[];let stored;
+  assert.deepEqual(writeVerifiedSave({text,write:value=>{calls.push('write');stored=value;},read:()=>{calls.push('read');return stored;}}),{ok:true});
+  assert.deepEqual(calls,['write','read']);
+  assert.equal(stored,text);
+  for(const actual of [null,'',text+' ']) {
+    let writes=0,reads=0;
+    assert.deepEqual(writeVerifiedSave({text,write:()=>writes++,read:()=>{reads++;return actual;}}),{ok:false,kind:'mismatch',actual});
+    assert.equal(writes,1);assert.equal(reads,1);
   }
+  const failure=new Error('storage unavailable');
+  let reads=0,writes=0;
+  const writeError=writeVerifiedSave({text,write:()=>{writes++;throw failure;},read:()=>{reads++;return text;}});
+  assert.deepEqual(writeError,{ok:false,kind:'write-error',error:failure});
+  assert.equal(reads,0);assert.equal(writes,1);
+  const readError=writeVerifiedSave({text,write:()=>writes++,read:()=>{reads++;throw failure;}});
+  assert.deepEqual(readError,{ok:false,kind:'read-error',error:failure});
+  assert.equal(reads,1);assert.equal(writes,2);
+  for(const input of [undefined,{}, {text:7,read:()=>text,write:()=>{}}, {text,read:null,write:()=>{}}, {text,read:()=>text,write:null}]) {
+    assert.throws(()=>writeVerifiedSave(input),TypeError);
+  }
+});
+
+test('core package imports and plays without optional generation or browser suppliers', async t => {
+  const root=await mkdtemp(join(tmpdir(),'idle-core-consumer-'));
+  t.after(()=>rm(root,{recursive:true,force:true}));
+  await cp(new URL('../src',import.meta.url),join(root,'src'),{recursive:true});
+  await cp(new URL('../package.json',import.meta.url),join(root,'package.json'));
+  const dataPackage='@red-cup-engineering/computer-data-engineering-services-section';
+  const dataEntry=await realpath(new URL(import.meta.resolve(`${dataPackage}/package.json`)));
+  await mkdir(join(root,'node_modules/@red-cup-engineering'),{recursive:true});
+  await symlink(dirname(dataEntry),join(root,'node_modules',dataPackage),'dir');
+  // A fresh process and fixture-local self references cannot reuse this test's
+  // module cache or accidentally resolve the optional peers from this checkout.
+  await writeFile(join(root,'consumer.mjs'),`
+    import assert from 'node:assert/strict';
+    import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
+    import {WORLDS} from '@red-cup-engineering/incremental-idle-game/worlds';
+    import {spendPoints} from '@red-cup-engineering/incremental-idle-game/transactions';
+    for(const world of WORLDS) {
+      const played=engine.tap(world,engine.newRun(world,1000),1000);
+      assert.equal(played.accepted,true);
+      assert.equal(spendPoints(world,played.state,1).accepted,true);
+    }
+  `);
+  const {execFileSync}=await import('node:child_process');
+  execFileSync(process.execPath,[join(root,'consumer.mjs')],{cwd:root,env:{...process.env,NODE_PATH:''}});
 });
 
 test('resource spending preserves partial objective progress and cannot buy prestige eligibility', () => {
