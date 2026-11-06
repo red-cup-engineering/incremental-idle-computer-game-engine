@@ -123,3 +123,32 @@ backup export, automatic production, damaged-save cancellation and completed
 reset. This changes only browser interaction and the published controls; native
 rules, state formats, selected dependencies and Mutualist's engine are unchanged.
 These tests do not establish actual-browser rendering or live deployment.
+
+## Retry a blocked read without abandoning page-local progress
+
+A temporary storage read failure originally left a world blocked for the entire
+page lifetime. Reloading to retry could discard other worlds' unsaved live runs;
+import and confirmed clear were replacement choices, not read recovery.
+
+The browser now offers **Retry reading save** only while the selected world is
+blocked. It cancels any pending erase confirmation, reads that world's current
+stored text, and admits it with the native world-specific save validator. Only
+an existing valid save replaces the blocked placeholder. A missing, malformed,
+wrong-world or unreadable value leaves it blocked, performs no write and preserves
+the first observed original text for export. A first read failure can acquire
+that original text on a later failed retry. It never invents a new run when a
+saved value is missing, never rereads over a playable live run and never clears
+other worlds' page-local state.
+
+Successful recovery returns focus to the normal play button and uses the existing
+render/clock/save path. Offline time is capped normally. Automatic persistence
+still compares the stored observation and verifies writes; a subsequent conflict
+or failure retains the newly admitted live run and shows the ordinary save warning.
+This is one observation, not a lock or a guarantee against later storage changes.
+
+The native `test:save-retry-consumer` script executes the original browser and
+its actual static build. It covers transient read failure, both worlds and unsaved
+draft retention, absent/corrupt/wrong-world bytes, first-observed recovery text,
+reset cancellation, subsequent write failure/conflict, capped production, repeated
+clicks and playable-world refusal. It does not establish actual-browser permission
+behavior, visual accessibility, production installation or public deployment.

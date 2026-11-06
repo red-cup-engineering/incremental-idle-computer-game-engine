@@ -203,6 +203,8 @@ function act(result,acceptedText) {
   save();render();
 }
 function render() {
+  $('retry-save').hidden=!blocked;
+  $('retry-save').disabled=!blocked;
   if (blocked) {
     $('tap').disabled=true;$('prestige').disabled=true;
     for (const id of ['banked','rate','tap-yield','run-produced','all-time','prestige-points']) $(id).textContent='Unavailable';
@@ -293,6 +295,25 @@ $('export').addEventListener('click',()=>{
     $('save-data').value=raw;$('save-data').focus();$('save-data').select();
     status(blocked?'Original unreadable save text is in the field; copy it before replacing it.':'Current live run is in the field; copy it somewhere safe. This does not save it automatically.');
   } catch {status('Original save text is unavailable. No replacement or empty run was exported.');}
+});
+$('retry-save').addEventListener('click',()=>{
+  // Only a blocked placeholder can be replaced by a reread. A playable live
+  // run may contain unsaved progress, so it must never take this path.
+  if(!blocked)return;
+  cancelReset();
+  let raw,next;
+  try {
+    raw=localStorage.getItem(storageKey(world.id));
+    if(raw===null){status('No saved run was found. Nothing was replaced. Import a backup or explicitly clear this world to start again.');return;}
+    // Keep the first observed damaged text available even when the initial
+    // read threw. Later failed retries must not replace that recovery copy.
+    slot.raw ??= raw;
+    next=admitRun(world,JSON.parse(raw));
+  } catch {status('The saved run still cannot be read. Nothing was replaced. Export the original text or import a valid backup.');return;}
+  adoptSaved(next,raw);
+  // Normal rendering settles capped offline time and attempts the existing
+  // guarded save. A later read/write conflict retains this admitted live run.
+  render();status('Saved run recovered for this world. Check save warnings before closing.');$('tap').focus();
 });
 $('import').addEventListener('click',()=>{
   cancelReset();
