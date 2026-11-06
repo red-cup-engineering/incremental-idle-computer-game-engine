@@ -239,3 +239,12 @@ purchase transition. See [batch previews](design/batch-previews.md).
 **Receiving boundary.** `npm test` and `npm run build` exercise the source and static browser artifact. They do not prove the package version is published, a Cloudflare/Cold Red Gate host has selected these assets, or that a public user has played. No production route is declared here.
 
 Runtime world admission requires string identities and dense record arrays in both direct engine and authored-design use. See [world admission](design/world-admission.md) for the boundary, intentional refusal of malformed custom definitions, and source/built consumer checks.
+
+
+### Cancel a pending world reset
+
+Little Worlds now provides **Cancel reset**. Resuming gameplay, selecting a world
+or attempting an import also cancels pending erase confirmation, so a later reset
+click cannot silently reuse an earlier decision. Exporting a backup and automatic
+production leave an intentional confirmation open. The native source/built-player
+check is `npm run test:reset-consumer`; see [browser recovery](design/browser-recovery.md).
