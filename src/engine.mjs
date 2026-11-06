@@ -12,6 +12,7 @@ export const MAX_POINTS = 1_000_000_000_000_000;
 export const MAX_LEVEL = 1000;
 const MAX_PRESTIGE = 1000;
 const ID = /^[a-z][a-z0-9-]{0,47}$/u;
+const validId = value => typeof value === 'string' && ID.test(value);
 const minText = (text, name) => {
   if (typeof text !== 'string' || !text.trim() || text.length > 160) throw new TypeError(`${name} must be meaningful short text`);
   return text.trim();
@@ -21,8 +22,12 @@ const pointSum = (a,b) => Math.min(MAX_POINTS, a+b);
 
 function records(input, field, ids, check) {
   if (!Array.isArray(input) || !input.length || input.length > 16) throw new TypeError(`${field} must have 1..16 entries`);
+  // Array methods skip holes. Every declared slot must be an owned record,
+  // matching the dense arrays accepted by the authored JSON design schema.
+  for (let index = 0; index < input.length; index++)
+    if (!Object.hasOwn(input, index)) throw new TypeError(`${field} requires dense records`);
   return Object.freeze(input.map(row => {
-    if (!row || typeof row !== 'object' || Array.isArray(row) || !ID.test(row.id) || ids.has(row.id)) {
+    if (!row || typeof row !== 'object' || Array.isArray(row) || !validId(row.id) || ids.has(row.id)) {
       throw new TypeError(`${field} requires unique named records`);
     }
     ids.add(row.id);
@@ -53,7 +58,7 @@ export function objectivesComplete(world, state) {
 
 /** Admit a named game world, including bounded rules and complete purchase data. */
 export function defineWorld(candidate) {
-  if (!candidate || candidate.kind !== WORLD_KIND || !ID.test(candidate.id)) throw new TypeError('invalid world identity');
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) || candidate.kind !== WORLD_KIND || !validId(candidate.id)) throw new TypeError('invalid world identity');
   minText(candidate.label, 'world.label');
   minText(candidate.description, 'world.description');
   minText(candidate.unit, 'world.unit');
