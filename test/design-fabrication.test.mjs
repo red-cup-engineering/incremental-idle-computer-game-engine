@@ -1,9 +1,4 @@
-/**
- * Independent consumer assays derived from the original d833f65 world rules
- * and the design-to-source receiving contract, before reading the new producer.
- * These are ordinary game/browser-build receiving tests, not hidden supplier
- * examples and not evidence of a public deployment or a real player's review.
- */
+/** Contract tests for authored catalogs, generation and playable artifacts. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -23,46 +18,10 @@ const SCHEMA = 'design/world-catalog.schema.json';
 const GENERATED = 'src/generated/world-definitions.mjs';
 const T = 1_700_000_000_000;
 
-// Independent, frozen-before-implementation oracle: the two original worlds.
-const ORIGINAL = [
-  {
-    kind: '561.incremental-idle-world/v1', id: 'trace-garden', label: 'Trace Garden',
-    description: 'Turn single marks into a sprawling, self-writing garden of patterns. An original, nonmonetary incremental game.',
-    unit: 'marks', verb: 'Make a mark', offlineCapSeconds: 21600, prestigeThreshold: 2500,
-    producers: [
-      { id: 'pencil', label: 'Patient pencil', baseCost: 10, ratePerSecond: 1, growthBasisPoints: 11800, unlockAt: 0 },
-      { id: 'press', label: 'Printing press', baseCost: 90, ratePerSecond: 7, growthBasisPoints: 12300, unlockAt: 60 },
-      { id: 'loom', label: 'Pattern loom', baseCost: 750, ratePerSecond: 42, growthBasisPoints: 12600, unlockAt: 400 },
-      { id: 'archive', label: 'Living archive', baseCost: 6400, ratePerSecond: 230, growthBasisPoints: 13000, unlockAt: 2200 },
-    ],
-    upgrades: [
-      { id: 'ink', label: 'Fresh ink · +4 per tap', cost: 35, unlockAt: 20, effect: 'tap', amount: 4 },
-      { id: 'binding', label: 'Shared bindings · +50% idle output', cost: 240, unlockAt: 120, effect: 'production', amount: 50 },
-      { id: 'stylus', label: 'Precision stylus · +24 per tap', cost: 1100, unlockAt: 500, effect: 'tap', amount: 24 },
-      { id: 'pattern', label: 'Repeatable patterns · +100% idle output', cost: 3500, unlockAt: 1800, effect: 'production', amount: 100 },
-    ],
-  },
-  {
-    kind: '561.incremental-idle-world/v1', id: 'pocket-observatory', label: 'Pocket Observatory',
-    description: 'Start with a single signal and grow a humming observatory. Your receivers keep collecting while you are away.',
-    unit: 'signals', verb: 'Observe a signal', offlineCapSeconds: 10800, prestigeThreshold: 4000,
-    producers: [
-      { id: 'antenna', label: 'Tin-can antenna', baseCost: 8, ratePerSecond: 1, growthBasisPoints: 12200, unlockAt: 0 },
-      { id: 'relay', label: 'Backyard relay', baseCost: 160, ratePerSecond: 13, growthBasisPoints: 12500, unlockAt: 90 },
-      { id: 'array', label: 'Mirror array', baseCost: 1200, ratePerSecond: 65, growthBasisPoints: 12800, unlockAt: 600 },
-      { id: 'satellite', label: 'Tiny satellite', baseCost: 9200, ratePerSecond: 330, growthBasisPoints: 13200, unlockAt: 3000 },
-    ],
-    upgrades: [
-      { id: 'lens', label: 'Clean lens · +6 per tap', cost: 45, unlockAt: 25, effect: 'tap', amount: 6 },
-      { id: 'gain', label: 'Signal amplifier · +75% idle output', cost: 360, unlockAt: 200, effect: 'production', amount: 75 },
-      { id: 'dish', label: 'Parabolic dish · +30 per tap', cost: 1450, unlockAt: 700, effect: 'tap', amount: 30 },
-      { id: 'correlator', label: 'Correlator · +120% idle output', cost: 5200, unlockAt: 2400, effect: 'production', amount: 120 },
-    ],
-  },
-];
-
 const readJSON = async path => JSON.parse(await readFile(path, 'utf8'));
 const putJSON = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+// Authored data is the input contract, not a frozen copy of an earlier release.
+const CATALOG_WORLDS = await readJSON(join(ROOT, CATALOG));
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'idle-design-receiving-'));
@@ -111,14 +70,13 @@ async function buyFirstProducer(world) {
   return purchase.state;
 }
 
-test('authored catalog and generated runtime preserve both original worlds exactly', async () => {
-  assert.deepEqual(await readJSON(join(ROOT, CATALOG)), ORIGINAL);
+test('generated modules receive the complete authored catalog without loss or reordering', async () => {
   const schema = await readJSON(join(ROOT, SCHEMA));
   assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
   const { WORLD_DEFINITIONS } = await import('../src/generated/world-definitions.mjs');
   const { WORLDS, worldById } = await import('../src/worlds.mjs');
-  assert.deepEqual(WORLD_DEFINITIONS, ORIGINAL);
-  assert.deepEqual(WORLDS, ORIGINAL);
+  assert.deepEqual(WORLD_DEFINITIONS, CATALOG_WORLDS);
+  assert.deepEqual(WORLDS, CATALOG_WORLDS);
   for (const world of WORLDS) assert.equal(worldById(world.id), world);
 });
 
@@ -138,7 +96,7 @@ test('generation is deterministic across roots and no-op on unchanged admitted d
 
 for (const [name, mutate] of [
   ['empty catalog', () => []],
-  ['non-array catalog', () => ({ worlds: ORIGINAL })],
+  ['non-array catalog', () => ({ worlds: CATALOG_WORLDS })],
   ['duplicate world identity', worlds => { worlds[1].id = worlds[0].id; }],
   ['duplicate producer identity', worlds => { worlds[0].producers[1].id = worlds[0].producers[0].id; }],
   ['producer and upgrade identity collision', worlds => { worlds[0].upgrades[0].id = worlds[0].producers[0].id; }],
@@ -158,7 +116,7 @@ for (const [name, mutate] of [
 ]) {
   test(`design admission refuses ${name} before any output write`, async t => {
     const root = await fixture(t);
-    const worlds = structuredClone(ORIGINAL);
+    const worlds = structuredClone(CATALOG_WORLDS);
     const replacement = mutate(worlds);
     await putJSON(join(root, CATALOG), replacement === undefined ? worlds : replacement);
     await assertRefusesWithoutWriting(root);
@@ -177,37 +135,37 @@ for (const [name, path, bytes] of [
   });
 }
 
-test('edited authored rules reach real producer income through regeneration', async t => {
+for (const rate of [2, 7, 41, 101]) test(`authored production rate ${rate} changes income without changing other worlds`, async t => {
   const root = await fixture(t);
-  const worlds = structuredClone(ORIGINAL);
-  worlds[0].producers[0].ratePerSecond = 3;
+  const worlds = structuredClone(CATALOG_WORLDS);
+  worlds[0].producers[0].ratePerSecond = rate;
   await putJSON(join(root, CATALOG), worlds);
   assert.equal((await generateWorlds({ root })).changed, true);
   const { WORLDS } = await import(pathToFileURL(join(root, 'src/worlds.mjs')).href);
-  assert.equal(WORLDS[0].producers[0].ratePerSecond, 3);
-  assert.deepEqual(WORLDS[1], ORIGINAL[1]);
+  assert.equal(WORLDS[0].producers[0].ratePerSecond, rate);
+  assert.deepEqual(WORLDS.slice(1), CATALOG_WORLDS.slice(1));
   const state = await buyFirstProducer(WORLDS[0]);
-  assert.equal(advance(WORLDS[0], state, T + 10_000).gained, 30);
+  assert.equal(advance(WORLDS[0], state, T + 10_000).gained, 10 * rate);
 });
 
 test('an additional admitted world becomes playable without editing runtime source', async t => {
   const root = await fixture(t);
-  const worlds = structuredClone(ORIGINAL);
+  const worlds = structuredClone(CATALOG_WORLDS);
   worlds.push({ ...structuredClone(worlds[0]), id: 'tidal-workshop', label: 'Tidal Workshop', unit: 'patterns', verb: 'Trace a pattern' });
   await putJSON(join(root, CATALOG), worlds);
   const consumerBefore = await readFile(join(root, 'src/worlds.mjs'), 'utf8');
   await generateWorlds({ root });
   const { WORLDS, worldById } = await import(pathToFileURL(join(root, 'src/worlds.mjs')).href);
-  assert.equal(WORLDS.length, 3);
+  assert.equal(WORLDS.length, worlds.length);
   const world = worldById('tidal-workshop');
-  assert.deepEqual(world, worlds[2]);
-  assert.equal(advance(world, await buyFirstProducer(world), T + 20_000).gained, 20);
+  assert.deepEqual(world, worlds.at(-1));
+  assert.equal(advance(world, await buyFirstProducer(world), T + 20_000).gained, 20 * world.producers[0].ratePerSecond);
   assert.equal(await readFile(join(root, 'src/worlds.mjs'), 'utf8'), consumerBefore);
 });
 
 test('authored text is received as literal data through generated JavaScript', async t => {
   const root = await fixture(t);
-  const worlds = structuredClone(ORIGINAL);
+  const worlds = structuredClone(CATALOG_WORLDS);
   const literal = "Quotes '\" and slash \\; `template ${notAnExpression}`; line\u2028separator";
   worlds[0].label = literal;
   await putJSON(join(root, CATALOG), worlds);
@@ -222,8 +180,8 @@ for (const stale of ['missing', 'edited-source', 'edited-design']) {
     if (stale === 'missing') await rm(join(root, GENERATED), { force: true });
     if (stale === 'edited-source') await writeFile(join(root, GENERATED), 'export const WORLD_DEFINITIONS = [];\n');
     if (stale === 'edited-design') {
-      const worlds = structuredClone(ORIGINAL);
-      worlds[0].prestigeThreshold = 2501;
+      const worlds = structuredClone(CATALOG_WORLDS);
+      worlds[0].prestigeThreshold += 1;
       await putJSON(join(root, CATALOG), worlds);
     }
     const before = await snapshot(root);
@@ -256,7 +214,7 @@ test('regenerated game survives the real static build and browser ESM module gra
   await build(out);
   const { WORLDS } = await import(pathToFileURL(join(out, 'assets/worlds.mjs')).href);
   const builtEngine = await import(pathToFileURL(join(out, 'assets/engine.mjs')).href);
-  assert.deepEqual(WORLDS, ORIGINAL);
+  assert.deepEqual(WORLDS, CATALOG_WORLDS);
   for (const world of WORLDS) {
     const outcome = builtEngine.tap(world, builtEngine.newRun(world, T), T);
     assert.equal(outcome.accepted, true);
@@ -264,20 +222,23 @@ test('regenerated game survives the real static build and browser ESM module gra
   }
 });
 
-for (const [index, expectedSparks] of [[0, 2], [1, 1]]) {
-  test(`generated ${ORIGINAL[index].id} completes purchase, capped offline return, save and prestige`, async () => {
+for (const [index, authored] of CATALOG_WORLDS.entries()) {
+  test(`generated ${CATALOG_WORLDS[index].id} completes purchase, capped offline return, save and prestige`, async () => {
     const { WORLDS } = await import('../src/worlds.mjs');
     const world = WORLDS[index];
     const purchaseState = await buyFirstProducer(world);
     const returned = advance(world, purchaseState, T + (world.offlineCapSeconds + 123) * 1000);
-    assert.equal(returned.gained, world.offlineCapSeconds);
+    assert.equal(returned.gained, world.offlineCapSeconds * authored.producers[0].ratePerSecond);
     assert.equal(returned.seconds, world.offlineCapSeconds);
     assert.equal(returned.discardedSeconds, 123);
     const raw = JSON.stringify(returned.state);
     const saved = admitRun(world, JSON.parse(raw));
-    assert.equal(JSON.stringify(saved), raw, 'unchanged save interpretation must roundtrip exactly');
+    assert.deepEqual(saved, returned.state, 'save admission preserves earned progress');
     assert.equal(advance(world, saved, saved.lastMs).gained, 0, 'return cannot pay capped history twice');
-    assert.throws(() => admitRun(WORLDS[1 - index], JSON.parse(raw)), /another world/);
+    for (const other of WORLDS.filter(candidate => candidate.id !== world.id)) {
+      assert.throws(() => admitRun(other, JSON.parse(raw)), /another world/);
+    }
+    const expectedSparks = Math.floor(Math.sqrt(saved.runProduced / authored.prestigeThreshold));
     const result = prestige(world, saved, saved.lastMs);
     assert.equal(result.accepted, true);
     assert.equal(result.awarded, expectedSparks);
@@ -285,8 +246,8 @@ for (const [index, expectedSparks] of [[0, 2], [1, 1]]) {
     assert.equal(result.state.runProduced, 0);
     assert.equal(result.state.allTime, saved.allTime);
     assert.equal(result.state.taps, saved.taps);
-    assert.deepEqual(Object.values(result.state.producers), [0, 0, 0, 0]);
-    assert.deepEqual(Object.values(result.state.upgrades), [false, false, false, false]);
+    assert.deepEqual(result.state.producers, Object.fromEntries(authored.producers.map(({id}) => [id, 0])));
+    assert.deepEqual(result.state.upgrades, Object.fromEntries(authored.upgrades.map(({id}) => [id, false])));
     assert.equal(project(world, result.state, result.state.lastMs).tapYield, 1 + expectedSparks);
   });
 }

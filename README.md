@@ -183,6 +183,16 @@ npm run build
 python3 -m http.server --directory dist 8080
 ```
 
+Tests use the Node test runner for game transitions, admission failures and
+mathematical properties. Generator tests compare emitted data with the current
+authored catalog and vary production rules through real gameplay, rather than
+keeping a second frozen catalog. Build tests import the emitted modules and run
+browser controls through the shared browser harness. Package tests exercise
+standalone save-write failures and core imports without optional tooling.
+Receipt hashes verify the current input and output bytes; no test freezes a
+supplier's implementation hash. Browser harness checks do not replace visual
+or real-browser testing.
+
 Open `http://127.0.0.1:8080/` and click, purchase a producer, let it grow, buy upgrades, reload, try the other world, and eventually Replant for permanent sparks. Every input action has a deterministic pure transition. `/assets/discrete-clock.mjs` is a **copied build artifact from the installed Computer Data supplier**, not another leaf implementation. The publisher reads the canonical package's exact resolved file and rewrites the engine's module specifier for static ESM browser loading; it does not ship a private package registry or start a second hosting system.
 
 ## Fabricate world rules from designs

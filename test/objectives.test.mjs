@@ -7,6 +7,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import * as e from '../src/engine.mjs';
 import {WORLDS} from '../src/worlds.mjs';
 import {generateWorlds} from '../scripts/generate-worlds.mjs';
+import {withBrowser,storageKey} from './helpers/browser-harness.mjs';
 const T=1700000000000;
 const base=WORLDS[0];
 const rules=[
@@ -161,8 +162,19 @@ test('optional objectives pass original schema→producer→runtime→static bui
   const {WORLDS:worlds}=await import(pathToFileURL(join(root,'received/assets/worlds.mjs')));
   assert.deepEqual(worlds,[world]);
   assert.equal(built.prestige(worlds[0],complete(),T).awarded,2);
-  assert.match(await readFile(join(root,'received/index.html'),'utf8'),/id="objectives"/);
-  assert.match(await readFile(join(root,'received/assets/browser.mjs'),'utf8'),/view.objectives/);
+  const html=await readFile(join(root,'received/index.html'),'utf8');
+  await withBrowser(join(root,'received/assets/browser.mjs'),html,
+    {now:T,entries:[[storageKey(world.id),JSON.stringify(complete())]]},app=>{
+      assert.equal(app.get('objectives-section').hidden,false);
+      assert.equal(app.get('objectives').children.length,rules.length);
+      for(const rule of rules) assert.ok(app.get('objectives').children.some(row=>row.textContent.includes(rule.label)));
+      assert.equal(app.get('prestige').disabled,false);
+      app.click('prestige');
+      const reset=JSON.parse(app.export());
+      assert.equal(reset.prestige,2);
+      assert.ok(Object.values(reset.objectiveProgress).every(count=>count===0));
+      assert.equal(app.get('prestige').disabled,true);
+    });
   const before=await readFile(join(root,'src/generated/world-definitions.mjs'),'utf8');
   await writeFile(join(root,'design/world-catalog.json'),JSON.stringify([{...world,prestigeObjectives:[{...rules[1],targetId:'missing'}]}]));
   await assert.rejects(generateWorlds({root}));
