@@ -14,6 +14,17 @@ const runs=new Map();
 const btns={producers:new Map(),upgrades:new Map(),readiness:new Map(),previews:new Map(),upgradePreviews:new Map()};
 const status = text => { $('status').textContent=text; };
 
+// Confirmation belongs to the current player decision, not the page lifetime.
+// Timers and exporting a backup do not change that decision. Any gameplay or
+// import attempt does, even if the requested action is refused.
+function cancelReset() {
+  resetArmed=false;
+  $('reset').textContent=blocked?'Clear damaged save':'Reset this world';
+  $('reset').setAttribute('aria-expanded','false');
+  $('cancel-reset').hidden=true;
+  $('cancel-reset').disabled=true;
+}
+
 function readSaved(current) {
   if (runs.has(current.id)) return runs.get(current.id);
   const entry={state:newRun(current,Date.now()),expected:null,raw:null,blocked:false,conflicted:false,error:''};
@@ -61,7 +72,7 @@ function save() {
   }
 }
 function adoptSaved(next,raw) {
-  state=next;blocked=false;resetArmed=false;
+  state=next;blocked=false;cancelReset();
   Object.assign(slot,{state,expected:raw,raw,blocked:false,conflicted:false,error:''});
   $('reset').textContent='Reset this world';
 }
@@ -124,7 +135,7 @@ function renderPrestige() {
 function installWorld(next) {
   world=next;
   slot=readSaved(world);state=slot.state;blocked=slot.blocked;
-  resetArmed=false;
+  cancelReset();
   if (blocked) {
     status(`This ${world.label} save cannot be read. It has NOT been replaced. Export it or explicitly clear it to start again.`);
   }
@@ -140,7 +151,7 @@ function installWorld(next) {
   for(const entry of WORLDS) {
     const b=el('button',entry.id===world.id?'selected':'secondary',entry.label);
     b.type='button';b.setAttribute('aria-pressed',String(entry.id===world.id));
-    b.addEventListener('click',()=>{ if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
+    b.addEventListener('click',()=>{ if(resetArmed)status('Reset cancelled. The selected world keeps its progress.');cancelReset();if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
     menu.append(b);
   }
   btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();btns.previews.clear();btns.upgradePreviews.clear();
@@ -186,6 +197,7 @@ function installWorld(next) {
   render();
 }
 function act(result,acceptedText) {
+  cancelReset();
   state=result.state;
   status(result.accepted ? acceptedText : `Not available: ${result.reason.replaceAll('-',' ')}.`);
   save();render();
@@ -257,11 +269,20 @@ function render() {
 $('tap').addEventListener('click',()=>{ if(!blocked) {const outcome=tap(world,state,Date.now());act(outcome,`+${format.format(outcome.gained)} ${world.unit} collected.`);} });
 $('prestige').addEventListener('click',()=>{ if(!blocked) { const outcome=prestige(world,state,Date.now()); act(outcome,outcome.accepted?`Replanted. +${outcome.awarded} permanent sparks; next run is faster.`:''); }});
 $('reset').addEventListener('click',()=>{
-  if(!resetArmed){resetArmed=true;$('reset').textContent='Confirm: erase this world';status('Press Confirm to erase this world’s local progress. Other worlds are unaffected.');return;}
+  if(!resetArmed){
+    resetArmed=true;$('reset').textContent='Confirm: erase this world';
+    $('reset').setAttribute('aria-expanded','true');
+    $('cancel-reset').hidden=false;$('cancel-reset').disabled=false;
+    status(`Press Confirm to erase ${world.label}’s local progress. Cancel or keep playing to keep this run. Other worlds are unaffected.`);return;
+  }
   const fresh=newRun(world,Date.now()),raw=JSON.stringify(fresh),result=writeSave(raw);
   if(!result.ok){failedWrite(result);status('Reset could not be verified. No replacement was adopted; storage may have changed.');return;}
   adoptSaved(fresh,raw);
   installWorld(world);status('This world was reset on this device.');
+});
+$('cancel-reset').addEventListener('click',()=>{
+  if(!resetArmed)return;
+  cancelReset();status('Reset cancelled. Your current world and save are unchanged.');$('reset').focus();
 });
 $('export').addEventListener('click',()=>{
   try {
@@ -274,6 +295,7 @@ $('export').addEventListener('click',()=>{
   } catch {status('Original save text is unavailable. No replacement or empty run was exported.');}
 });
 $('import').addEventListener('click',()=>{
+  cancelReset();
   let parsed;
   try {parsed=admitRun(world,JSON.parse($('save-data').value));}
   catch {status('Import refused. No save was written and the current run is unchanged.');return;}

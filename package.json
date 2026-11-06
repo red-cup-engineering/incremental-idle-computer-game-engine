@@ -18,7 +18,8 @@
     "generate": "node scripts/generate-worlds.mjs",
     "check:generated": "node scripts/generate-worlds.mjs --check",
     "test": "node --test",
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "test:reset-consumer": "node --test test/reset-confirmation.test.mjs"
   },
   "license": "MIT",
   "funding": {

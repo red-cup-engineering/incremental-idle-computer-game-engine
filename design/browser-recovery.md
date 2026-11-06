@@ -91,3 +91,35 @@ which import the generator are intentionally outside that core-only contract;
 the full suite runs with its declared development suppliers. No Mutualist rule
 or artifact update is required by this browser-only change: its selected engine,
 transactions and generated-world modules are byte-identical to prior main.
+
+
+## Reset confirmation follows the current decision
+
+At source `3d4c07a413ec837973d0f16aa8f7068e0610dd38`, beginning a reset and
+then resuming taps or purchases left the erase confirmation armed. A later
+single reset click could therefore erase the newly earned run. The browser now
+invalidates pending confirmation whenever the player attempts gameplay,
+selects a world (including the current world), or attempts an import, whether
+that import succeeds, is malformed, or fails verified storage. Replanting also
+cancels the old erase decision before starting its new run.
+
+A visible **Cancel reset** button cancels without modifying live state or
+stored bytes and returns keyboard focus to Reset. It is hidden and disabled
+when no confirmation is pending. Damaged saves use the same cancellation flow
+without replacing their raw text. This is an ordinary keyboard-accessible
+button, not a dialog or a new keyboard shortcut.
+
+Exporting a backup and automatic production do not cancel confirmation: they
+are compatible with a deliberate reset. The confirmation names the current
+world and explains how to cancel. A reset still needs two clicks after a
+cancellation, still affects only its selected world, and still adopts a fresh
+run only after verified storage. Existing write-failure retry behavior remains.
+
+`npm run test:reset-consumer` exercises the actual browser entry and the original
+static publisher's built entry through deterministic DOM/storage adapters.
+The cases cover resumed tapping, producer and upgrade choices, replanting,
+malformed and storage-failing imports, explicit cancellation, world switches,
+backup export, automatic production, damaged-save cancellation and completed
+reset. This changes only browser interaction and the published controls; native
+rules, state formats, selected dependencies and Mutualist's engine are unchanged.
+These tests do not establish actual-browser rendering or live deployment.
