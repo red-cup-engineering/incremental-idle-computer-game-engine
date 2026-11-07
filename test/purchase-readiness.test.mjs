@@ -106,7 +106,7 @@ for(const [target,entry] of targets) {
     await t.test('replant recomputes zero income, locked tiers and cheaper first unit',()=>{
       const world=WORLDS[0],state=buyProducer(world,taps(world,2500),'pencil',2,now).state;
       return run(initial(world,state),app=>{
-        app.click('prestige');
+        app.click('prestige');app.click('confirm-prestige');
         assert.deepEqual(JSON.parse(app.export()),prestige(world,state,now).state);
         assert.match(ready(app,'producers'),/10 marks short.*Make a mark/);
         assert.equal(ready(app,'producers',1),'Produce 60 more marks this run to unlock.');

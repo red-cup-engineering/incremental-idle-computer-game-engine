@@ -79,8 +79,18 @@ export const storageKey = id => `561-incremental-idle:${id}:v1`;
  */
 export async function withBrowser(entry, html, options, callback) {
   const elements = new Map();
-  for (const [, tag, id] of html.matchAll(/<([a-z][a-z0-9-]*)\b[^>]*\bid="([^"]+)"/gi)) {
-    elements.set(id, new FakeElement(tag));
+  for (const [opening, tag, id] of html.matchAll(/<([a-z][a-z0-9-]*)\b[^>]*\bid="([^"]+)"[^>]*>/gi)) {
+    const element = new FakeElement(tag);
+    // Preserve the real build's static attributes as well as runtime changes.
+    // This intentionally supports its ordinary quoted/boolean HTML attributes,
+    // not layout, native focus traversal or a complete browser DOM.
+    for (const [, name, double, single, bare] of opening.slice(tag.length + 1, -1)
+      .matchAll(/([^\s=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s]+)))?/g)) {
+      element.setAttribute(name, double ?? single ?? bare ?? '');
+    }
+    element.hidden = element.attributes.has('hidden');
+    element.disabled = element.attributes.has('disabled');
+    elements.set(id, element);
   }
   const storage = makeStorage(options.entries ?? []);
   Object.assign(storage.faults, options.faults ?? {});

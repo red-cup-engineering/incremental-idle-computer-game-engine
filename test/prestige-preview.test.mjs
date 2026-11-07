@@ -59,13 +59,13 @@ for(const [target,entry] of targets) {
           checkReady(app,world,state);app.tick(0);app.tick(0);
           assert.deepEqual(JSON.parse(app.export()),state);
           const expected=prestige(world,state,now);
-          app.click('prestige');assert.deepEqual(JSON.parse(app.export()),expected.state);
+          app.click('prestige');app.click('confirm-prestige');assert.deepEqual(JSON.parse(app.export()),expected.state);
           assert.equal(app.get('prestige').disabled,true);
           assert.match(preview(app),/Replant now: unavailable/);assert.doesNotMatch(preview(app),/Replant resets:/);
-          app.click('prestige');assert.deepEqual(JSON.parse(app.export()),expected.state);
+          app.click('prestige');app.click('confirm-prestige');assert.deepEqual(JSON.parse(app.export()),expected.state);
           // Dispatch a stale handler directly: command refuses and render refreshes.
           for(const handler of app.get('prestige').listeners.get('click'))handler();
-          assert.match(app.text('status'),/threshold not met/);
+          assert.match(app.text('status'),/not available/);
           assert.deepEqual(JSON.parse(app.export()),expected.state);
           assert.doesNotMatch(preview(app),/Replant resets:/);
         });
@@ -105,7 +105,7 @@ for(const [target,entry] of targets) {
     await t.test('failed writes keep live post-replant state, not stale saved costs',()=>{
       const world=WORLDS[0],state=ready(world);
       return run({...initial(world,state),faults:{beforeSet:()=>{throw new Error('quota');}}},app=>{
-        app.click('prestige');assert.deepEqual(JSON.parse(app.export()),prestige(world,state,now).state);
+        app.click('prestige');app.click('confirm-prestige');assert.deepEqual(JSON.parse(app.export()),prestige(world,state,now).state);
         assert.deepEqual(app.saved(world.id),state);assert.doesNotMatch(preview(app),/Replant resets:/);
         assert.match(app.text('save-status'),/could not be verified/);
       });
@@ -126,7 +126,7 @@ for(const target of ['fixture-source','fixture-built']) {
       app.tick(0);assert.match(preview(app),/Make two manual actions \(1\/2\)/);
       app.tap();assert.equal(app.get('prestige').disabled,false);
       assert.doesNotMatch(preview(app),/Still needed:/);assert.match(preview(app),/Objectives start over/);
-      const before=JSON.parse(app.export());app.click('prestige');
+      const before=JSON.parse(app.export());app.click('prestige');app.click('confirm-prestige');
       assert.deepEqual(JSON.parse(app.export()),prestige(objective,before,now).state);
       assert.match(preview(app),/Make two manual actions \(0\/2\)/);assert.doesNotMatch(preview(app),/Replant resets:/);
     });

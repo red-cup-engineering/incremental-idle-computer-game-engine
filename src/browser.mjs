@@ -7,7 +7,7 @@ const format = new Intl.NumberFormat('en-US', { maximumFractionDigits:0, notatio
 const exact = new Intl.NumberFormat('en-US', { maximumFractionDigits:0 });
 const storageKey = id => `561-incremental-idle:${id}:v1`;
 const pick = new URLSearchParams(location.search).get('world');
-let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=false;
+let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=false, replantArmed=false;
 // At most the declared worlds. These page-local runs are not durable backups.
 // Keeping them prevents a failed save followed by a world switch losing play.
 const runs=new Map();
@@ -23,6 +23,16 @@ function cancelReset() {
   $('reset').setAttribute('aria-expanded','false');
   $('cancel-reset').hidden=true;
   $('cancel-reset').disabled=true;
+}
+
+// Replant confirmation is a separate control so a double click or held Enter
+// on the original button cannot also commit the reset.
+function cancelReplant() {
+  replantArmed=false;
+  $('prestige').setAttribute('aria-expanded','false');
+  $('replant-confirmation').hidden=true;
+  $('confirm-prestige').disabled=true;
+  $('cancel-prestige').disabled=true;
 }
 
 function readSaved(current) {
@@ -72,7 +82,7 @@ function save() {
   }
 }
 function adoptSaved(next,raw) {
-  state=next;blocked=false;cancelReset();
+  state=next;blocked=false;cancelReset();cancelReplant();
   Object.assign(slot,{state,expected:raw,raw,blocked:false,conflicted:false,error:''});
   $('reset').textContent='Reset this world';
 }
@@ -111,9 +121,15 @@ function readinessNode(id,content) {
   return `readiness-${id}`;
 }
 function renderPrestige() {
-  // render has already settled time. The same planner is used by the click.
+  // Quote the current admitted run. Normal rendering settles time; opening
+  // review does not. Confirmation uses the native command and its current clock.
   const quote=quotePrestige(world,state),button=$('prestige');
   button.disabled=!quote.accepted;
+  button.setAttribute('aria-expanded',String(replantArmed));
+  $('replant-confirmation').hidden=!replantArmed;
+  $('confirm-prestige').disabled=!replantArmed || !quote.accepted;
+  $('cancel-prestige').disabled=!replantArmed;
+  $('confirm-prestige').textContent=`Confirm: replant for +${exact.format(quote.awarded)} permanent sparks`;
   button.setAttribute('aria-describedby','prestige-preview');
   button.textContent=quote.accepted
     ? `Replant for +${quote.awarded} permanent spark${quote.awarded===1?'':'s'}`
@@ -135,7 +151,7 @@ function renderPrestige() {
 function installWorld(next) {
   world=next;
   slot=readSaved(world);state=slot.state;blocked=slot.blocked;
-  cancelReset();
+  cancelReset();cancelReplant();
   if (blocked) {
     status(`This ${world.label} save cannot be read. It has NOT been replaced. Export it or explicitly clear it to start again.`);
   }
@@ -151,7 +167,7 @@ function installWorld(next) {
   for(const entry of WORLDS) {
     const b=el('button',entry.id===world.id?'selected':'secondary',entry.label);
     b.type='button';b.setAttribute('aria-pressed',String(entry.id===world.id));
-    b.addEventListener('click',()=>{ if(resetArmed)status('Reset cancelled. The selected world keeps its progress.');cancelReset();if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
+    b.addEventListener('click',()=>{ if(resetArmed || replantArmed)status('Reset cancelled. The selected world keeps its progress.');cancelReset();cancelReplant();if(entry.id!==world.id){save();installWorld(entry); history.replaceState(null,'',`?world=${encodeURIComponent(entry.id)}`);} });
     menu.append(b);
   }
   btns.producers.clear();btns.upgrades.clear();btns.readiness.clear();btns.previews.clear();btns.upgradePreviews.clear();
@@ -197,7 +213,7 @@ function installWorld(next) {
   render();
 }
 function act(result,acceptedText) {
-  cancelReset();
+  cancelReset();cancelReplant();
   state=result.state;
   status(result.accepted ? acceptedText : `Not available: ${result.reason.replaceAll('-',' ')}.`);
   save();render();
@@ -269,8 +285,32 @@ function render() {
   save();
 }
 $('tap').addEventListener('click',()=>{ if(!blocked) {const outcome=tap(world,state,Date.now());act(outcome,`+${format.format(outcome.gained)} ${world.unit} collected.`);} });
-$('prestige').addEventListener('click',()=>{ if(!blocked) { const outcome=prestige(world,state,Date.now()); act(outcome,outcome.accepted?`Replanted. +${outcome.awarded} permanent sparks; next run is faster.`:''); }});
+$('prestige').addEventListener('click',()=>{
+  if(blocked)return;
+  cancelReset();
+  if(replantArmed)return;
+  if(!quotePrestige(world,state).accepted){status('Replant is not available. Check the current preview.');return;}
+  replantArmed=true;renderPrestige();
+  status(`Review ${world.label}’s reset costs below. Confirm replanting to trade this run for permanent sparks, or cancel to keep growing. The preview updates as production continues.`);
+});
+$('confirm-prestige').addEventListener('click',()=>{
+  if(blocked || !replantArmed)return;
+  const outcome=prestige(world,state,Date.now());
+  act(outcome,outcome.accepted?`Replanted. +${outcome.awarded} permanent sparks; next run is faster.`:'');
+  $('tap').focus();
+});
+function dismissReplant() {
+  if(!replantArmed)return;
+  cancelReplant();status('Replant cancelled. Your current world and save are unchanged.');$('prestige').focus();
+}
+$('cancel-prestige').addEventListener('click',dismissReplant);
+function replantKeydown(event) {
+  if(event.key==='Escape' && replantArmed){event.preventDefault();dismissReplant();}
+}
+$('prestige').addEventListener('keydown',replantKeydown);
+$('replant-confirmation').addEventListener('keydown',replantKeydown);
 $('reset').addEventListener('click',()=>{
+  cancelReplant();
   if(!resetArmed){
     resetArmed=true;$('reset').textContent='Confirm: erase this world';
     $('reset').setAttribute('aria-expanded','true');
@@ -300,7 +340,7 @@ $('retry-save').addEventListener('click',()=>{
   // Only a blocked placeholder can be replaced by a reread. A playable live
   // run may contain unsaved progress, so it must never take this path.
   if(!blocked)return;
-  cancelReset();
+  cancelReset();cancelReplant();
   let raw,next;
   try {
     raw=localStorage.getItem(storageKey(world.id));
@@ -316,7 +356,7 @@ $('retry-save').addEventListener('click',()=>{
   render();status('Saved run recovered for this world. Check save warnings before closing.');$('tap').focus();
 });
 $('import').addEventListener('click',()=>{
-  cancelReset();
+  cancelReset();cancelReplant();
   let parsed;
   try {parsed=admitRun(world,JSON.parse($('save-data').value));}
   catch {status('Import refused. No save was written and the current run is unchanged.');return;}

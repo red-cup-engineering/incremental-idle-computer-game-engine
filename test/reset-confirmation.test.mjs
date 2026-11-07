@@ -52,7 +52,7 @@ for(const [name,entry] of targets){
   app.click('reset');assert.equal(app.export(),before);assert.equal(app.saved().banked,7);
  }));
  test(`${name}: prestige starts a new run without retaining erase consent`,()=>run({entries:[[storageKey(world.id),JSON.stringify(runWithTaps(world.prestigeThreshold))]]},app=>{
-  app.click('reset');app.click('prestige');assertDisarmed(app);assert.equal(app.saved().prestige,1);
+  app.click('reset');app.click('prestige');app.click('confirm-prestige');assertDisarmed(app);assert.equal(app.saved().prestige,1);
   app.click('reset');assert.equal(app.saved().prestige,1);app.click('cancel-reset');assert.equal(app.saved().prestige,1);
  }));
  test(`${name}: a failed verified import cancels erase consent and keeps the live run`,()=>run({},app=>{

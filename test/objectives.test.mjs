@@ -169,7 +169,7 @@ test('optional objectives pass original schema→producer→runtime→static bui
       assert.equal(app.get('objectives').children.length,rules.length);
       for(const rule of rules) assert.ok(app.get('objectives').children.some(row=>row.textContent.includes(rule.label)));
       assert.equal(app.get('prestige').disabled,false);
-      app.click('prestige');
+      app.click('prestige');app.click('confirm-prestige');
       const reset=JSON.parse(app.export());
       assert.equal(reset.prestige,2);
       assert.ok(Object.values(reset.objectiveProgress).every(count=>count===0));

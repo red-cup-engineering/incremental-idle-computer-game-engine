@@ -55,8 +55,49 @@ shows exact production/award/next-target values and explains the losses and new
 manual/automatic yields. The button references the status and preview for
 assistive technology, with no continuously announced progress stream. Missing
 objectives, a full permanent cap, an unreachable higher threshold and a damaged
-save have explicit text rather than stale eligible previews. Clicks still call
-`prestige` with the current state and clock, not the displayed quote.
+save have explicit text rather than stale eligible previews. Confirmed replanting
+calls `prestige` with the current state and clock, not the displayed quote.
+
+### Deliberate replant decision
+
+Players must be able to inspect an available replant without destroying the
+current run. The original one-click browser handler immediately removed all
+banked points, producers, upgrades and objectives. The engine's reset remains
+correct; this is a browser decision boundary for both shipped worlds.
+
+- **Review:** activating Replant opens separate Confirm and Cancel controls.
+  It must not advance time, write storage or call the reset command. Repeating
+  the original button remains review-only, so a double click or held Enter on
+  it cannot commit the reset. Focus stays on that original control; Confirm is
+  the next button in document order, not the newly focused repeat target.
+- **Confirm:** the distinct confirmation applies the original native `prestige`
+  command once against current state and time. It closes the decision and
+  returns focus to manual play. Repeated or stale confirmation handlers outside
+  an open review do nothing. The existing guarded save owns persistence and
+  continues to retain unsaved live progress when storage fails.
+- **Cancel:** Cancel or Escape from Replant or either confirmation control closes the
+  decision without changing run or storage and returns focus to Replant.
+- **Invalidate:** manual play, producer/upgrade decisions, an import attempt
+  (including refusal or failed writes), selecting either world and beginning a
+  full reset cancel old replant consent. Opening replant review cancels any
+  pending full erase. The two decisions can never both be armed.
+- **Keep reviewing:** timer production and backup export retain the decision.
+  The existing exact preview and confirmation award refresh with production;
+  they are not a frozen quote or reserved award. Damaged saves cannot arm it.
+
+State model: closed → review on an eligible original activation; review → closed
+on confirmation, cancellation or invalidating action; review → review on timer,
+export or repeated original activation. Only the confirmed transition invokes
+the existing reset. World definitions, progression, save format and engine API
+remain unchanged.
+
+`test/replant-confirmation.test.mjs` exercises these transitions through the
+complete source and built browser module graphs for both worlds, using ordinary
+Node tests and the existing browser-platform adapter. Adjacent objective,
+readiness, reset and prestige consumers now use the separate confirmation when
+they intentionally request a reset. The adapter preserves built HTML attributes
+so visibility, disabled state and accessible-control references can be asserted.
+It is not a browser, layout renderer or native keyboard automation.
 
 ## Qualification
 

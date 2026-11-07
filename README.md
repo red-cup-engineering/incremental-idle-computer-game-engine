@@ -28,6 +28,15 @@ It does not load a house aggregator or any other game engine. Core-only consumer
 need neither browser supplier. See [browser recovery](design/browser-recovery.md)
 for its exact provenance, player contract and non-atomic limits.
 
+## Review before replanting
+
+In both Little Worlds, Replant now opens a separate confirmation beside the
+exact loss and award preview. Clicking Replant again cannot erase the run.
+Confirm trades the current run for permanent sparks; Cancel or Escape keeps it.
+Continuing play, importing, choosing a world or starting a full reset cancels
+the old choice. Idle production and exporting a backup leave review open and
+refresh its current award. See [replant planning](design/prestige-planning.md).
+
 ## Bounded active-time settlement
 
 Automatic production floors the exact aggregate producer income and percentage
