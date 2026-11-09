@@ -122,6 +122,14 @@ is unchanged; this is an additional read-only capability.
 
 ## Clock-free producer purchase quotes
 
+Purchase timing, including a still-locked item, is available separately through
+`forecastProducerPurchase(world, run, id, fromMs, toMs)` and
+`forecastUpgradePurchase(world, run, id, fromMs, toMs)`. These pure forecasts
+combine the independent stock and run-production requirements at the native
+tick phase. They forecast one next unit or upgrade, not a batch or an automatic
+purchase. Both Little Worlds consume them for locked-item planning. See
+[the interval, cap and result contract](design/purchase-readiness.md#shared-planning-api).
+
 `quoteProducerPurchase(world, run, producerId, requested)` from `/engine` returns
 `{accepted, count, spent, rateGain}` for a possible purchase against the supplied
 admitted balance. Refusals add `reason` and return zero for all three metrics.
@@ -225,8 +233,10 @@ separate contracts.
 ## Purchase readiness
 
 Each producer shows readiness for its next single unit; upgrades show their own
-shortfall and estimated wait at the current automatic rate. Locked items instead
-show the production still needed this run. Estimates pause for a backward device
+shortfall and estimated wait at the current automatic rate. Locked items show
+both the production still needed this run and any stock shortfall, with the
+combined wait until unlocking and payment are possible. Nothing is purchased
+automatically. Estimates pause for a backward device
 clock, and disclose waits longer than one offline collection cap. Buy 10 and Buy
 max retain their original partial-batch behavior (up to 10 and 100); the feedback
 now reports the actual quantity and points spent. See the [presentation contract](design/purchase-readiness.md).

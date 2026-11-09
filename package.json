@@ -21,7 +21,8 @@
     "build": "node scripts/build.mjs",
     "test:reset-consumer": "node --test test/reset-confirmation.test.mjs",
     "test:save-retry-consumer": "node --test test/save-read-retry.test.mjs",
-    "test:replant-consumer": "node --test test/replant-confirmation.test.mjs"
+    "test:replant-consumer": "node --test test/replant-confirmation.test.mjs",
+    "test:purchase-forecast-consumer": "node --test test/purchase-forecast-consumer.test.mjs"
   },
   "license": "MIT",
   "funding": {
