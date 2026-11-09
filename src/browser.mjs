@@ -188,6 +188,7 @@ function installWorld(next) {
     const owned=el('span','amount');
     for(const [label,count] of [['Buy 1',1],['Buy 10',10],['Buy max','max']]) {
       const b=el('button','secondary',label);b.type='button';
+      b.setAttribute('aria-label',`${label}: ${p.label}`);
       let describedBy=description;
       if(count!==1) {
         const preview=el('p','purchase-preview');
@@ -215,6 +216,7 @@ function installWorld(next) {
     preview.setAttribute('id',`preview-upgrade-${u.id}`);
     content.append(preview);btns.upgradePreviews.set(u.id,preview);
     const button=el('button','secondary','');button.type='button';
+    button.setAttribute('aria-label',`Buy: ${u.label}`);
     button.setAttribute('aria-describedby',`${description} preview-upgrade-${u.id}`);
     button.addEventListener('click',()=>act(buyUpgrade(world,state,u.id,Date.now()),`Installed ${u.label} for ${exact.format(u.cost)} ${world.unit}.`));
     row.append(button);upgrades.append(row);btns.upgrades.set(u.id,button);
@@ -278,6 +280,7 @@ function render() {
   for(const u of view.upgrades) {
     const b=btns.upgrades.get(u.id);
     b.textContent=u.owned?'Installed':u.locked?`Unlocks at ${format.format(u.unlockAt)}`:`Buy for ${format.format(u.cost)} ${world.unit}`;
+    b.setAttribute('aria-label',`${b.textContent}: ${u.label}`);
     b.disabled=u.owned || u.locked || state.banked<u.cost;
     btns.readiness.get(u.id).textContent=u.owned ? 'Already installed.'
       : purchaseReadiness('upgrade',u,now);
