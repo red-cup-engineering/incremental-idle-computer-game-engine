@@ -79,7 +79,7 @@ for(const [target,entry] of targets) {
         app.import(JSON.stringify({...state,prestige:999}));
         assert.equal(app.get('prestige').disabled,false);assert.match(preview(app),/Replant now: \+1 permanent sparks/);
         assert.match(preview(app),/This replant reaches the permanent spark limit/);assert.doesNotMatch(preview(app),/Next award:/);
-        app.click('reset');app.click('reset');assert.doesNotMatch(preview(app),/Replant resets:|limit reached/);
+        app.click('reset');app.click('confirm-reset');assert.doesNotMatch(preview(app),/Replant resets:|limit reached/);
         assert.ok(preview(app).includes(`(${exact(world.prestigeThreshold)} more)`));
       }));
       await t.test(`${world.id}: settled income refreshes goal exactly once`,()=>{

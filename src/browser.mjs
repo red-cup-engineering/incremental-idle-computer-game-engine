@@ -21,6 +21,8 @@ function cancelReset() {
   resetArmed=false;
   $('reset').textContent=blocked?'Clear damaged save':'Reset this world';
   $('reset').setAttribute('aria-expanded','false');
+  $('reset-confirmation').hidden=true;
+  $('confirm-reset').disabled=true;
   $('cancel-reset').hidden=true;
   $('cancel-reset').disabled=true;
 }
@@ -314,23 +316,34 @@ function replantKeydown(event) {
 }
 $('prestige').addEventListener('keydown',replantKeydown);
 $('replant-confirmation').addEventListener('keydown',replantKeydown);
+// Keep review and erasure on separate controls, just as for replanting.
+// Repeated activation of the opener must never supply destructive consent.
 $('reset').addEventListener('click',()=>{
   cancelReplant();
-  if(!resetArmed){
-    resetArmed=true;$('reset').textContent='Confirm: erase this world';
-    $('reset').setAttribute('aria-expanded','true');
-    $('cancel-reset').hidden=false;$('cancel-reset').disabled=false;
-    status(`Press Confirm to erase ${world.label}’s local progress. Cancel or keep playing to keep this run. Other worlds are unaffected.`);return;
-  }
+  if(resetArmed)return;
+  resetArmed=true;
+  $('reset').setAttribute('aria-expanded','true');
+  $('reset-confirmation').hidden=false;
+  $('confirm-reset').disabled=false;
+  $('cancel-reset').hidden=false;$('cancel-reset').disabled=false;
+  status(`Use the separate Confirm erase button to erase ${world.label}’s local progress. Cancel or keep playing to keep this run. Other worlds are unaffected.`);
+});
+$('confirm-reset').addEventListener('click',()=>{
+  if(!resetArmed)return;
   const fresh=newRun(world,Date.now()),raw=JSON.stringify(fresh),result=writeSave(raw);
   if(!result.ok){failedWrite(result);status('Reset could not be verified. No replacement was adopted; storage may have changed.');return;}
   adoptSaved(fresh,raw);
-  installWorld(world);status('This world was reset on this device.');
+  installWorld(world);status('This world was reset on this device.');$('reset').focus();
 });
-$('cancel-reset').addEventListener('click',()=>{
+function dismissReset() {
   if(!resetArmed)return;
   cancelReset();status('Reset cancelled. Your current world and save are unchanged.');$('reset').focus();
-});
+}
+$('cancel-reset').addEventListener('click',dismissReset);
+function resetKeydown(event) {
+  if(event.key==='Escape' && resetArmed){event.preventDefault();dismissReset();}
+}
+for(const id of ['reset','confirm-reset','cancel-reset']) $(id).addEventListener('keydown',resetKeydown);
 $('export').addEventListener('click',()=>{
   try {
     // Never export stale persisted bytes in place of an admitted live run.

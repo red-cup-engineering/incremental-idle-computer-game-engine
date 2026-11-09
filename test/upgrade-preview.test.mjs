@@ -66,7 +66,7 @@ for(const [target,entry] of targets) {
         const owned=structuredClone(rich);for(const u of world.upgrades)owned.upgrades[u.id]=true;
         app.import(JSON.stringify(owned));
         for(let i=0;i<world.upgrades.length;i++)assert.equal(preview(app,i),'Upgrade: already installed.');
-        app.click('reset');app.click('reset');
+        app.click('reset');app.click('confirm-reset');
         for(let i=0;i<world.upgrades.length;i++)assert.equal(preview(app,i),'Upgrade: locked.');
       }));
       await t.test(`${world.id}: production gains reflect additive bonuses, rounding and zero producers`,()=>{

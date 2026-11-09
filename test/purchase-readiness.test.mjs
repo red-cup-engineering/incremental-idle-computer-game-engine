@@ -153,7 +153,7 @@ for(const [target,entry] of targets) {
       assert.equal(ready(app,'producers'),'Next unit: Ready now.');
       app.click('reset');
       assert.equal(ready(app,'producers'),'Next unit: Ready now.','unconfirmed reset preserves current run');
-      app.click('reset');
+      app.click('confirm-reset');
       assert.match(ready(app,'producers'),/10 marks short.*Make a mark/);
       app.choose('Pocket Observatory');
       assert.match(ready(app,'producers'),/10 signals short.*at this rate/);

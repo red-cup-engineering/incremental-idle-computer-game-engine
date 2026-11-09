@@ -272,7 +272,9 @@ Runtime world admission requires string identities and dense record arrays in bo
 
 ### Cancel a pending world reset
 
-Little Worlds now provides **Cancel reset**. Resuming gameplay, selecting a world
+Little Worlds opens a separate **Confirm erase this world** control. Repeated
+clicks or keyboard activation of **Reset this world** only open that review;
+they cannot also erase progress. **Cancel reset** or Escape dismisses it. Resuming gameplay, selecting a world
 or attempting an import also cancels pending erase confirmation, so a later reset
 click cannot silently reuse an earlier decision. Exporting a backup and automatic
 production leave an intentional confirmation open. The native source/built-player
