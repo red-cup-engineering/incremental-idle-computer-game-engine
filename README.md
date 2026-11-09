@@ -279,3 +279,11 @@ or attempting an import also cancels pending erase confirmation, so a later rese
 click cannot silently reuse an earlier decision. Exporting a backup and automatic
 production leave an intentional confirmation open. The native source/built-player
 check is `npm run test:reset-consumer`; see [browser recovery](design/browser-recovery.md).
+
+### Identify purchase choices without row context
+
+Producer and upgrade controls include the item's name in their accessible name,
+while retaining the current visible action or price and the existing readiness
+and quote descriptions. Upgrade names update after purchases and world changes.
+See [purchase control names](design/purchase-names.md) and run
+`npm run test:purchase-names-consumer` for the source/built regression checks.
