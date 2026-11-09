@@ -77,8 +77,8 @@ for(const [target,entry] of targets) {
     await t.test('locks describe earned-this-run progress even with an imported large balance',()=>{
       const world=WORLDS[0],state={...newRun(world,now),banked:1000,allTime:1000};
       return run(initial(world,state),app=>{
-        assert.equal(ready(app,'producers',1),'Produce 60 more marks this run to unlock.');
-        assert.equal(ready(app,'upgrades',0),'Produce 20 more marks this run to unlock.');
+        assert.match(ready(app,'producers',1),/^Produce 60 more marks this run to unlock\./);
+        assert.match(ready(app,'upgrades',0),/^Produce 20 more marks this run to unlock\./);
         assert.equal(producerButton(app,1).disabled,true);
         assert.equal(upgradeButton(app).disabled,true);
         app.tap(20);
@@ -109,7 +109,7 @@ for(const [target,entry] of targets) {
         app.click('prestige');app.click('confirm-prestige');
         assert.deepEqual(JSON.parse(app.export()),prestige(world,state,now).state);
         assert.match(ready(app,'producers'),/10 marks short.*Make a mark/);
-        assert.equal(ready(app,'producers',1),'Produce 60 more marks this run to unlock.');
+        assert.match(ready(app,'producers',1),/^Produce 60 more marks this run to unlock\./);
       });
     });
     await t.test('capped inventories and unreachable prices have no misleading countdown',()=>{

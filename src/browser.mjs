@@ -1,5 +1,5 @@
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProduction, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -104,15 +104,22 @@ function waitLabel(milliseconds) {
   const hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
   return [hours?`${hours}h`:'',minutes?`${minutes}m`:'',rest?`${rest}s`:''].filter(Boolean).join(' ') || '0s';
 }
-function purchaseReadiness(cost,now) {
+function purchaseReadiness(kind,item,now) {
+  const cost=kind==='producer'?item.nextCost:item.cost;
   if(cost>MAX_POINTS) return 'Price exceeds the balance limit; no further purchase is possible.';
-  if(cost<=state.banked) return 'Ready now.';
-  const shortfall=`${format.format(cost-state.banked)} ${world.unit} short.`;
+  const missingProduced=Math.max(0,item.unlockAt-state.runProduced);
+  if(cost<=state.banked && missingProduced===0) return 'Ready now.';
+  const requirements=[];
+  if(missingProduced) requirements.push(`Produce ${format.format(missingProduced)} more ${world.unit} this run to unlock.`);
+  if(cost>state.banked) requirements.push(`${format.format(cost-state.banked)} ${world.unit} short.`);
+  const shortfall=requirements.join(' ');
   if(now<state.lastMs) return `${shortfall} Idle estimate paused until the device clock catches up.`;
-  const quote=forecastProduction(world,state,cost,now,Math.min(Number.MAX_SAFE_INTEGER,now+world.offlineCapSeconds*1000));
+  const forecast=kind==='producer'?forecastProducerPurchase:forecastUpgradePurchase;
+  const quote=forecast(world,state,item.id,now,Math.min(Number.MAX_SAFE_INTEGER,now+world.offlineCapSeconds*1000));
   if(quote.rate===0) return `${shortfall} Use “${world.verb}” to earn more.`;
   if(quote.waitMs===null) return `${shortfall} No safe idle-time estimate is available.`;
-  return `${shortfall} About ${waitLabel(quote.waitMs)} at this rate${quote.waitMs>world.offlineCapSeconds*1000?' (beyond one offline collection cap)':''}.`;
+  const goal=missingProduced?' until unlocked and affordable':'';
+  return `${shortfall} About ${waitLabel(quote.waitMs)}${goal} at this rate${quote.waitMs>world.offlineCapSeconds*1000?' (beyond one offline collection cap)':''}.`;
 }
 function readinessNode(id,content) {
   const node=el('p','purchase-readiness');
@@ -254,8 +261,7 @@ function render() {
     btns.producers.get(`${p.id}:owned`).textContent=`Owned ${p.owned}`;
     btns.producers.get(`${p.id}:cost`).textContent=visible;
     btns.readiness.get(p.id).textContent=p.owned>=MAX_LEVEL ? `Maximum owned (${MAX_LEVEL}).`
-      : p.locked ? `Produce ${format.format(p.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
-      : `Next unit: ${purchaseReadiness(p.nextCost,now)}`;
+      : `${p.locked?'':'Next unit: '}${purchaseReadiness('producer',p,now)}`;
     for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=MAX_LEVEL || state.banked<p.nextCost;
     for(const n of [10,'max']) {
       // project has already settled this observation. Quotes cannot advance
@@ -272,8 +278,7 @@ function render() {
     b.textContent=u.owned?'Installed':u.locked?`Unlocks at ${format.format(u.unlockAt)}`:`Buy for ${format.format(u.cost)} ${world.unit}`;
     b.disabled=u.owned || u.locked || state.banked<u.cost;
     btns.readiness.get(u.id).textContent=u.owned ? 'Already installed.'
-      : u.locked ? `Produce ${format.format(u.unlockAt-state.runProduced)} more ${world.unit} this run to unlock.`
-      : purchaseReadiness(u.cost,now);
+      : purchaseReadiness('upgrade',u,now);
     const quote=quoteUpgradePurchase(world,state,u.id);
     const gain=u.effect==='tap' ? `+${exact.format(quote.tapGain)} per action`
       : `+${exact.format(quote.rateGain)} / sec at current inventory`;

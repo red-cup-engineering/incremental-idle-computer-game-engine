@@ -231,9 +231,13 @@ export function forecastProduction(world,candidate,target,fromMs,toMs) {
   const {state,carriedMs}=admitActiveInterval(world,candidate,fromMs,toMs);
   boundedNatural(target,'target');
   const missing=Math.max(0,target-state.banked),rate=incomePerSecond(world,state);
+  return {missing,rate,...forecastWait(missing,rate,carriedMs,fromMs,toMs,target<=MAX_POINTS)};
+}
+
+function forecastWait(missing,rate,carriedMs,fromMs,toMs,possible=true) {
   let waitMs=null;
-  if(missing===0) waitMs=0;
-  else if(target<=MAX_POINTS && rate>0) {
+  if(possible && missing===0) waitMs=0;
+  else if(possible && rate>0) {
     // Exact quotient and duration avoid rounded-up division at integer limits.
     // Credit itself continues to use the existing native rate and saturation.
     const ticks=(BigInt(missing)+BigInt(rate)-1n)/BigInt(rate);
@@ -241,7 +245,46 @@ export function forecastProduction(world,candidate,target,fromMs,toMs) {
     if(duration<=BigInt(Number.MAX_SAFE_INTEGER)) waitMs=Number(duration);
   }
   const reachable=waitMs!==null && waitMs<=toMs-fromMs;
-  return {missing,rate,waitMs,reachable,readyAtMs:reachable?fromMs+waitMs:null};
+  return {waitMs,reachable,readyAtMs:reachable?fromMs+waitMs:null};
+}
+
+function forecastPurchaseRequirements(world,interval,cost,unlockAt,fromMs,toMs,reason) {
+  const {state,carriedMs}=interval,rate=incomePerSecond(world,state);
+  const missingBanked=cost===null?null:Math.max(0,cost-state.banked);
+  const missingProduced=unlockAt===null?null:Math.max(0,unlockAt-state.runProduced);
+  // Balance and run production saturate independently. Adding the production
+  // deficit to the current bank would invent an unreachable balance target.
+  const missing=Math.max(missingBanked,missingProduced);
+  return {cost,missingBanked,missingProduced,rate,
+    ...forecastWait(missing,rate,carriedMs,fromMs,toMs,!reason),
+    ...(reason?{reason}:{})};
+}
+
+/** Read-only readiness for the next single producer, including its unlock.
+ * Both requirements must hold at the same native tick. The interval has the
+ * advanceActive contract; waitMs may exceed it, but readyAtMs never does.
+ * No purchase, reservation, batch commitment or future rate change is implied.
+ */
+export function forecastProducerPurchase(world,candidate,id,fromMs,toMs) {
+  const interval=admitActiveInterval(world,candidate,fromMs,toMs);
+  const producer=world.producers.find(p=>p.id===id);
+  if(!producer) return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'unknown-producer');
+  if(interval.state.producers[id]>=MAX_LEVEL)
+    return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'level-cap');
+  const cost=producerPrice(producer,interval.state.producers[id]);
+  return forecastPurchaseRequirements(world,interval,cost,producer.unlockAt,fromMs,toMs,cost>MAX_POINTS?'price-cap':undefined);
+}
+
+/** Read-only readiness for one unowned upgrade, including its unlock. Uses the
+ * same bounded production clock and independent balance/run-total requirements
+ * as producer readiness. An actual command settles time and checks again.
+ */
+export function forecastUpgradePurchase(world,candidate,id,fromMs,toMs) {
+  const interval=admitActiveInterval(world,candidate,fromMs,toMs);
+  const upgrade=world.upgrades.find(u=>u.id===id);
+  if(!upgrade) return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'unknown-upgrade');
+  return forecastPurchaseRequirements(world,interval,upgrade.cost,upgrade.unlockAt,fromMs,toMs,
+    interval.state.upgrades[id]?'already-owned':undefined);
 }
 
 export function tap(world,candidate,nowMs) {
