@@ -24,7 +24,8 @@ const assertDisarmed=app=>{
  assert.equal(app.get('reset').getAttribute('aria-expanded'),'false');
 };
 const assertArmed=app=>{
- assert.equal(app.text('reset'),'Confirm: erase this world');
+ assert.equal(app.get('confirm-reset').disabled,false);
+ assert.equal(app.get('reset-confirmation').hidden,false);
  assert.equal(app.get('cancel-reset').hidden,false);
  assert.equal(app.get('cancel-reset').disabled,false);
  assert.equal(app.get('reset').getAttribute('aria-expanded'),'true');
@@ -68,7 +69,7 @@ for(const [name,entry] of targets){
   assert.match(app.text('status'),/Reset cancelled/);assert.equal(app.get('reset').focused,true);
   assert.equal(app.export(),before);assert.equal(app.storage.data.get(storageKey(world.id)),saved);
   assert.equal(app.storage.calls.filter(row=>row.operation==='set').length,writes);
-  app.click('reset');assert.equal(app.export(),before);app.click('reset');assert.equal(app.saved().banked,0);
+  app.click('reset');assert.equal(app.export(),before);app.click('confirm-reset');assert.equal(app.saved().banked,0);
  }));
  test(`${name}: switching worlds and selecting the current world cancel pending resets`,()=>run({},app=>{
   app.tap(3);app.click('reset');app.choose('Trace Garden');assertDisarmed(app);assert.match(app.text('status'),/Reset cancelled/);
@@ -80,13 +81,13 @@ for(const [name,entry] of targets){
   const state=buyProducer(world,runWithTaps(50),world.producers[0].id,1,now).state;
   return run({entries:[[storageKey(world.id),JSON.stringify(state)]]},app=>{
    app.click('reset');const before=JSON.parse(app.export());app.tick(1000);assertArmed(app);
-   assert.ok(app.saved().banked>before.banked);app.click('reset');assert.equal(app.saved().banked,0);assertDisarmed(app);
+   assert.ok(app.saved().banked>before.banked);app.click('confirm-reset');assert.equal(app.saved().banked,0);assertDisarmed(app);
   });
  });
  test(`${name}: damaged saves can cancel clear without replacing original text`,()=>run({entries:[[storageKey(world.id),'{damaged']]},app=>{
   app.click('reset');assertArmed(app);app.click('cancel-reset');
   assert.equal(app.text('reset'),'Clear damaged save');assert.equal(app.get('cancel-reset').hidden,true);
   assert.equal(app.storage.data.get(storageKey(world.id)),'{damaged');assert.equal(app.export(),'{damaged');
-  app.click('reset');assertArmed(app);app.click('reset');assert.equal(app.saved().banked,0);assertDisarmed(app);
+  app.click('reset');assertArmed(app);app.click('confirm-reset');assert.equal(app.saved().banked,0);assertDisarmed(app);
  }));
 }

@@ -314,12 +314,12 @@ for (const [name, entry] of targets) {
       assert.equal(writes(app).length, before);
       checkRun(app, 5);
       app.storage.faults.beforeSet = throwQuota;
-      app.click('reset');
+      app.click('confirm-reset');
       assert.match(app.text('status'), /reset could not be verified/i);
       checkRun(app, 5);
       assert.equal(app.saved().banked, 5);
       delete app.storage.faults.beforeSet;
-      app.click('reset');
+      app.click('confirm-reset');
       checkRun(app, 0);
       assert.equal(app.saved().banked, 0);
       assert.equal(app.text('save-status'), '');
@@ -338,7 +338,7 @@ for (const [name, entry] of targets) {
         if (failure === 'after-write-read') app.storage.faults.beforeGet = throwRead;
         if (failure === 'readback-mismatch') app.storage.faults.afterSet = (operation, data) => data.set(operation.key, rawRun(9));
         if (failure === 'write-then-throw') app.storage.faults.afterSet = () => { throw new Error('Adversarial post-mutation exception'); };
-        app.click('reset');
+        app.click('confirm-reset');
         assert.match(app.text('status'), /reset could not be verified/i);
         assert.match(app.text('status'), /storage may have changed/i);
         checkRun(app, 5);
@@ -350,7 +350,7 @@ for (const [name, entry] of targets) {
         app.choose('Trace Garden');
         checkRun(app, 5);
         app.click('reset');
-        app.click('reset');
+        app.click('confirm-reset');
         checkRun(app, 0);
         assert.equal(app.saved().banked, 0);
       }));
@@ -362,12 +362,12 @@ for (const [name, entry] of targets) {
         app.click('reset');
         assert.equal(app.storage.data.get(gardenKey), corrupt);
         app.storage.faults.beforeSet = throwQuota;
-        app.click('reset');
+        app.click('confirm-reset');
         checkBlockedDisplay(app);
         assert.equal(app.export(), corrupt);
         assert.equal(app.storage.data.get(gardenKey), corrupt);
         delete app.storage.faults.beforeSet;
-        app.click('reset');
+        app.click('confirm-reset');
         checkRun(app, 0);
         assert.equal(app.get('tap').disabled, false);
         app.tap();

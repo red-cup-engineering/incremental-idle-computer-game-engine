@@ -167,7 +167,7 @@ for(const [target,entry] of targets) {
       assert.equal(preview(app,10),'Buy 10: 2 for 22 marks; +2 / sec.');
       app.import(JSON.stringify(funded(WORLDS[0],10)));
       assert.equal(preview(app,10),'Buy 10: 1 for 10 marks; +1 / sec.');
-      app.click('reset');app.click('reset');
+      app.click('reset');app.click('confirm-reset');
       assert.equal(preview(app,10),'Buy 10: no affordable units yet.');
     }));
     await t.test('blocked saves never show speculative inventory, and recovery restores quotes',()=>run({entries:[[storageKey('trace-garden'),'{broken']]},app=>{

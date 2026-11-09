@@ -107,11 +107,11 @@ A visible **Cancel reset** button cancels without modifying live state or
 stored bytes and returns keyboard focus to Reset. It is hidden and disabled
 when no confirmation is pending. Damaged saves use the same cancellation flow
 without replacing their raw text. This is an ordinary keyboard-accessible
-button, not a dialog or a new keyboard shortcut.
+button. Escape also dismisses pending reset review and returns focus to Reset.
 
 Exporting a backup and automatic production do not cancel confirmation: they
 are compatible with a deliberate reset. The confirmation names the current
-world and explains how to cancel. A reset still needs two clicks after a
+world and explains how to cancel. A reset needs a fresh review and activation of the separate confirmation after a
 cancellation, still affects only its selected world, and still adopts a fresh
 run only after verified storage. Existing write-failure retry behavior remains.
 
@@ -152,3 +152,27 @@ draft retention, absent/corrupt/wrong-world bytes, first-observed recovery text,
 reset cancellation, subsequent write failure/conflict, capped production, repeated
 clicks and playable-world refusal. It does not establish actual-browser permission
 behavior, visual accessibility, production installation or public deployment.
+
+## Separate review from destructive reset activation
+
+The previous interaction intentionally confirmed erase on the second activation
+of the same Reset button. This meant a double click or repeated keyboard
+activation could erase a run without a distinct confirmation gesture. The
+existing Replant controls already avoid that ambiguity. Reset now uses the same
+separate-control design: Reset opens review, repeated opener activations do
+nothing, and only the armed Confirm erase control performs the existing verified
+replacement. No focus is moved onto the destructive control when review opens.
+
+Cancel or Escape dismisses review and returns focus to Reset. After a successful
+reset, the confirmation is disarmed and focus returns to Reset; stale repeated
+confirmation events cannot erase newer play. A failed verified write retains
+review and the existing retry semantics. Damaged-save clearing, selected-world
+isolation, export, automatic production and storage behavior are unchanged.
+
+`test/reset-intent.test.mjs` runs the actual source and native-built browser
+modules for both worlds, covering repeated opener activation, distinct explicit
+confirmation, stale confirmation after newer play, Escape, cancel, resumed play,
+import attempts and world selection. The normal `npm test` includes these cases.
+The DOM adapter exercises click events (including the activation events generated
+by keys); it does not certify real-device key repeat, browser rendering, focus
+traversal or screen-reader behavior.
