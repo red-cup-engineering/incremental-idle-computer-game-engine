@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WORLDS } from '../src/worlds.mjs';
+import { WORLDS } from './fixtures/worlds.mjs';
 import { MAX_POINTS, MAX_LEVEL, defineWorld, newRun, admitRun, producerPrice, buyProducer,
   project, prestige, forecastProduction } from '../src/engine.mjs';
 

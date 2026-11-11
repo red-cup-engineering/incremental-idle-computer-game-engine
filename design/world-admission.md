@@ -31,8 +31,8 @@ coercion. Check dense own indices before map-based row validation so omitted
 rows cannot escape validation. Reject array/function world containers before
 reading game fields.
 
-`test/world-admission.test.mjs` derives direct-runtime and built-engine negative
-cases from these clauses, keeps valid string IDs such as `undefined` and
+`test/world-admission.test.mjs` and `test/world-admission-consumer.test.mjs`
+derive direct-runtime and built-engine negative cases from these clauses, keeps valid string IDs such as `undefined` and
 `constructor`, and exercises purchase and JSON save round trips. The same
 malformed JSON identities are refused by the existing authored-design generator
 without replacing generated source. Native tests retain both existing browser

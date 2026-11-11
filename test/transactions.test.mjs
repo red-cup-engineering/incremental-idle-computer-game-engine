@@ -1,5 +1,5 @@
 import test from'node:test';import assert from'node:assert/strict';
-import{spendPoints}from'../src/transactions.mjs';import{WORLDS}from'../src/worlds.mjs';
+import{spendPoints}from'../src/transactions.mjs';import{WORLDS}from'./fixtures/worlds.mjs';
 import{newRun,admitRun,advance,MAX_POINTS}from'../src/engine.mjs';
 const world=WORLDS[0],funded=n=>({...newRun(world,1000),banked:n,runProduced:n,allTime:n});
 test('exact affordable debit changes only balance, preserving input and detachable inventory',()=>{

@@ -1,27 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cp,mkdtemp,readFile,rm,symlink,writeFile} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {fileURLToPath,pathToFileURL} from 'node:url';
 import * as e from '../src/engine.mjs';
-import {WORLDS} from '../src/worlds.mjs';
-import {generateWorlds} from '../scripts/generate-worlds.mjs';
-import {withBrowser,storageKey} from './helpers/browser-harness.mjs';
-const T=1700000000000;
-const base=WORLDS[0];
-const rules=[
-  {id:'manual-practice',label:'Make two manual actions',action:'tap',count:2},
-  {id:'build-tools',label:'Buy two pencils',action:'buy-producer',targetId:'pencil',count:2},
-  {id:'improve-tools',label:'Install fresh ink',action:'buy-upgrade',targetId:'ink',count:1},
-];
-const world=e.defineWorld({...base,id:'objective-fixture',prestigeObjectives:rules});
-const funded=(w=world)=>({...e.newRun(w,T),banked:10000,runProduced:10000,allTime:10000});
-function complete(s=funded(),w=world) {
-  s=e.tap(w,s,T).state;s=e.tap(w,s,T).state;
-  s=e.buyProducer(w,s,'pencil',2,T).state;
-  return e.buyUpgrade(w,s,'ink',T).state;
-}
+import {WORLDS} from './fixtures/worlds.mjs';
+import {T, base, rules, world, funded, complete} from './fixtures/objective-run.mjs';
 test('equal earnings but different objective progress produce different prestige eligibility',()=>{
   const completed=complete();
   const incomplete={...funded(),banked:completed.banked,runProduced:completed.runProduced,allTime:completed.allTime};
@@ -145,40 +126,6 @@ test('legacy worlds, new-run bytes and prestige remain unchanged',()=>{
     assert.equal(e.prestige(w,rich,T).awarded,2);
     assert.equal(Object.hasOwn(e.project(w,s,T),'objectives'),false);
   }
-});
-test('optional objectives pass original schema→producer→runtime→static build chain',async t=>{
-  const root=await mkdtemp(join(tmpdir(),'objective-receiving-'));
-  t.after(()=>rm(root,{recursive:true,force:true}));
-  const source=fileURLToPath(new URL('../',import.meta.url));
-  for(const dir of ['design','src','scripts']) await cp(join(source,dir),join(root,dir),{recursive:true});
-  await cp(join(source,'package.json'),join(root,'package.json'));
-  await symlink(join(source,'node_modules'),join(root,'node_modules'),'dir');
-  await writeFile(join(root,'design/world-catalog.json'),JSON.stringify([world]));
-  await generateWorlds({root});
-  await generateWorlds({root,check:true});
-  const {build}=await import(pathToFileURL(join(root,'scripts/build.mjs')));
-  await build(join(root,'received'));
-  const built=await import(pathToFileURL(join(root,'received/assets/engine.mjs')));
-  const {WORLDS:worlds}=await import(pathToFileURL(join(root,'received/assets/worlds.mjs')));
-  assert.deepEqual(worlds,[world]);
-  assert.equal(built.prestige(worlds[0],complete(),T).awarded,2);
-  const html=await readFile(join(root,'received/index.html'),'utf8');
-  await withBrowser(join(root,'received/assets/browser.mjs'),html,
-    {now:T,entries:[[storageKey(world.id),JSON.stringify(complete())]]},app=>{
-      assert.equal(app.get('objectives-section').hidden,false);
-      assert.equal(app.get('objectives').children.length,rules.length);
-      for(const rule of rules) assert.ok(app.get('objectives').children.some(row=>row.textContent.includes(rule.label)));
-      assert.equal(app.get('prestige').disabled,false);
-      app.click('prestige');app.click('confirm-prestige');
-      const reset=JSON.parse(app.export());
-      assert.equal(reset.prestige,2);
-      assert.ok(Object.values(reset.objectiveProgress).every(count=>count===0));
-      assert.equal(app.get('prestige').disabled,true);
-    });
-  const before=await readFile(join(root,'src/generated/world-definitions.mjs'),'utf8');
-  await writeFile(join(root,'design/world-catalog.json'),JSON.stringify([{...world,prestigeObjectives:[{...rules[1],targetId:'missing'}]}]));
-  await assert.rejects(generateWorlds({root}));
-  assert.equal(await readFile(join(root,'src/generated/world-definitions.mjs'),'utf8'),before);
 });
 
 test('producer objective admission respects the actual finite price ceiling',()=>{
