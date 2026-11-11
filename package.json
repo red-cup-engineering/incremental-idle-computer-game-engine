@@ -6,7 +6,7 @@
   "description": "Two complete local-only idle games over one declarative progression engine.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/red-cup-engineering/incremental-idle-game.git"
+    "url": "git+https://github.com/red-cup-engineering/incremental-idle-computer-game-engine.git"
   },
   "engines": {
     "node": ">=24"
