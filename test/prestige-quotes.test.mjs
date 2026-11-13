@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as e from '../src/engine.mjs';
-import {WORLDS} from '../src/worlds.mjs';
+import {WORLDS} from './fixtures/worlds.mjs';
 const now=1700000000000;
 const funded=(world,produced=world.prestigeThreshold*9)=>({...e.newRun(world,now),banked:produced,runProduced:produced,allTime:produced});
 function assertQuote(world,state) {

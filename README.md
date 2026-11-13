@@ -189,6 +189,44 @@ shared award calculation uses bounded exact integer thresholds; save formats,
 world balance and external titles' pinned artifacts remain unchanged. See
 [replant planning](design/prestige-planning.md) for the public result contract.
 
+## Engine-only qualification
+
+The extraction obligation in `TODO.md` remains open. The engine's existing
+transition, arithmetic, purchase, objective and admission assertions now consume
+explicit regression inputs in `test/fixtures/`, rather than importing the Little
+Worlds catalog. These inputs preserve the historical numerical witnesses from
+commit `7cff7c23515a6cd4948603cb22fd89c829519ab2`; they are not a second authored
+game catalog or generated runtime source. Title generation, browser and built
+consumer assertions remain in the original full suite.
+
+```sh
+npm run test:engine
+npm run test:engine-consumer
+```
+
+The first command executes the original engine assertions. The second reruns
+those exact files from an isolated tree containing only `src/engine.mjs`,
+`src/transactions.mjs`, their tests, and the real already-installed Computer Data
+supplier. No title catalog, generated worlds, generator, browser, style, build
+script, JSNode or gamehouse supplier is available there. A negative control
+restores a title-world import and verifies that the isolated proof fails.
+
+The consumer command also packs this package with lifecycle scripts disabled and
+network access disabled, extracts that actual archive, and exercises its public
+engine and transaction entrances with caller-authored rules. It checks purchase,
+production readiness, active settlement, spending, save admission and prestige
+without installing the optional title suppliers. The copied Computer Data package
+is version-checked against the runtime manifest. This is selected-entrance source
+and packed-artifact qualification, not a fresh dependency installation, package
+publication, browser playthrough or completed source extraction.
+
+The main `npm test`, generated-source check and browser build still run all their
+original checks. The exact intended upstream remains
+`@red-cup-engineering/game-engine`. This change neither fabricates that package nor
+substitutes another owner for it, and adds no dependency. The existing title-owned
+source, tooling and historical file-based development supplier still need their
+real receiving owner before removal from this repository.
+
 ## Native developer use
 
 Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:

@@ -23,7 +23,9 @@
     "test:save-retry-consumer": "node --test test/save-read-retry.test.mjs",
     "test:replant-consumer": "node --test test/replant-confirmation.test.mjs",
     "test:purchase-names-consumer": "node --test test/purchase-names.test.mjs",
-    "test:purchase-forecast-consumer": "node --test test/purchase-forecast-consumer.test.mjs"
+    "test:purchase-forecast-consumer": "node --test test/purchase-forecast-consumer.test.mjs",
+    "test:engine": "node --test test/active-interval.test.mjs test/engine.test.mjs test/prestige-quotes.test.mjs test/producer-prices.test.mjs test/production-arithmetic.test.mjs test/production-forecast.test.mjs test/purchase-forecast.test.mjs test/purchase-quotes.test.mjs test/transactions.test.mjs test/upgrade-quotes.test.mjs test/objectives.test.mjs test/world-admission.test.mjs",
+    "test:engine-consumer": "node --test test/engine-boundary-consumer.test.mjs"
   },
   "license": "MIT",
   "funding": {

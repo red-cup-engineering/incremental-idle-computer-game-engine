@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WORLDS } from '../src/worlds.mjs';
+import { WORLDS } from './fixtures/worlds.mjs';
 import { MAX_POINTS, STATE_KIND, WORLD_KIND, defineWorld, newRun, admitRun,
   advance, tap, buyProducer, buyUpgrade, prestige, project, producerPrice } from '../src/engine.mjs';
 const [garden, observatory] = WORLDS;

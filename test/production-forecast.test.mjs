@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {WORLDS} from '../src/worlds.mjs';
+import {WORLDS} from './fixtures/worlds.mjs';
 import {MAX_POINTS,defineWorld,newRun,advanceActive,forecastProduction,
   tap,buyProducer,buyUpgrade,prestige,incomePerSecond} from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 
