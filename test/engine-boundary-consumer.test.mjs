@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const name = '@red-cup-engineering/incremental-idle-game';
+const name = '@red-cup-engineering/incremental-idle-computer-game-engine';
 const dataName = '@red-cup-engineering/computer-data-engineering-services-section';
 const manifest = JSON.parse(await readFile(join(root, 'package.json')));
 const dataRoot = dirname(fileURLToPath(import.meta.resolve(`${dataName}/package.json`)));
@@ -100,7 +100,7 @@ test('the actual packed engine entrances receive caller-authored rules without t
       forecastProduction, prestige, admitRun} from '${name}/engine';
     import {spendPoints} from '${name}/transactions';
     for (const optional of [
-      '@red-cup-engineering/jsnode-package-services-section',
+      '@red-cup-engineering/jsnode-package-engineering-services-section',
       '@red-cup-engineering/computer-game-systems-engineering-services-section',
     ]) assert.throws(() => import.meta.resolve(optional), {code: 'ERR_MODULE_NOT_FOUND'});
     const world = defineWorld({
