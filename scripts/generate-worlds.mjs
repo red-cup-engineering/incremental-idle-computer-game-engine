@@ -4,7 +4,7 @@ import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
-import { projectJsnodeModules } from '@red-cup-engineering/jsnode-package-services-section/project-jsnode-modules';
+import { projectJsnodeModules } from '@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-modules';
 import { defineWorld } from '../src/engine.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,13 +16,13 @@ const decode = bytes => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true})
 
 async function producerIdentity() {
   const specifiers = [
-    '@red-cup-engineering/jsnode-package-services-section/project-jsnode-modules',
-    '@red-cup-engineering/jsnode-package-services-section/project-jsnode-data-modules',
+    '@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-modules',
+    '@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-data-modules',
   ];
   const sources = await Promise.all(specifiers.map(async specifier => ({
     specifier, digest: digest(await readFile(fileURLToPath(import.meta.resolve(specifier)))),
   })));
-  return {package: '@red-cup-engineering/jsnode-package-services-section', sources};
+  return {package: '@red-cup-engineering/jsnode-package-engineering-services-section', sources};
 }
 
 /** Capture and admit one design snapshot, producing source without any writes. */

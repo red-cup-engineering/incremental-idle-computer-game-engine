@@ -17,14 +17,14 @@
     }
   ],
   "producer": {
-    "package": "@red-cup-engineering/jsnode-package-services-section",
+    "package": "@red-cup-engineering/jsnode-package-engineering-services-section",
     "sources": [
       {
-        "specifier": "@red-cup-engineering/jsnode-package-services-section/project-jsnode-modules",
+        "specifier": "@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-modules",
         "digest": "sha256:4cd08c942a099ca6c1c01dd65ad03657f86b0ecc23476295fba4811f7d0cfa10"
       },
       {
-        "specifier": "@red-cup-engineering/jsnode-package-services-section/project-jsnode-data-modules",
+        "specifier": "@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-data-modules",
         "digest": "sha256:570d815765dc96779f7e41b6e3b9949848a07503f0c749e186616e97138cf2b4"
       }
     ]

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
+import * as engine from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 import { WORLDS } from '../src/worlds.mjs';
 
 const {defineWorld,newRun,advanceActive,buyProducer,buyUpgrade,incomePerSecond,MAX_POINTS,MAX_LEVEL}=engine;

@@ -4,11 +4,11 @@ import { cp, mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from '
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
-import * as transactions from '@red-cup-engineering/incremental-idle-game/transactions';
-import { WORLDS } from '@red-cup-engineering/incremental-idle-game/worlds';
-import * as legacyEngine from '@red-cup-engineering/incremental-idle-game/src/engine.mjs';
-import * as legacyTransactions from '@red-cup-engineering/incremental-idle-game/src/transactions.mjs';
+import * as engine from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
+import * as transactions from '@red-cup-engineering/incremental-idle-computer-game-engine/transactions';
+import { WORLDS } from '@red-cup-engineering/incremental-idle-computer-game-engine/worlds';
+import * as legacyEngine from '@red-cup-engineering/incremental-idle-computer-game-engine/src/engine.mjs';
+import * as legacyTransactions from '@red-cup-engineering/incremental-idle-computer-game-engine/src/transactions.mjs';
 
 test('package entrances are aliases to the original modules, not duplicate state or implementations', () => {
   assert.equal(engine, legacyEngine);
@@ -32,7 +32,7 @@ test('package contract carries authored runtime, design, tools and native receiv
 
 test('generation tooling declares its exact optional peer without expanding the core runtime contract', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
-  const supplier = '@red-cup-engineering/jsnode-package-services-section';
+  const supplier = '@red-cup-engineering/jsnode-package-engineering-services-section';
   const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url)));
   assert.equal(manifest.devDependencies[supplier], lock.packages[`node_modules/${supplier}`].version);
   assert.equal(manifest.peerDependencies[supplier], manifest.devDependencies[supplier]);
@@ -97,9 +97,9 @@ test('core package imports and plays without optional generation or browser supp
   // module cache or accidentally resolve the optional peers from this checkout.
   await writeFile(join(root,'consumer.mjs'),`
     import assert from 'node:assert/strict';
-    import * as engine from '@red-cup-engineering/incremental-idle-game/engine';
-    import {WORLDS} from '@red-cup-engineering/incremental-idle-game/worlds';
-    import {spendPoints} from '@red-cup-engineering/incremental-idle-game/transactions';
+    import * as engine from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
+    import {WORLDS} from '@red-cup-engineering/incremental-idle-computer-game-engine/worlds';
+    import {spendPoints} from '@red-cup-engineering/incremental-idle-computer-game-engine/transactions';
     for(const world of WORLDS) {
       const played=engine.tap(world,engine.newRun(world,1000),1000);
       assert.equal(played.accepted,true);

@@ -72,7 +72,7 @@
   ],
   "requirements": "design/README.md",
   "supplier": {
-    "package": "@red-cup-engineering/jsnode-package-services-section",
+    "package": "@red-cup-engineering/jsnode-package-engineering-services-section",
     "version": "0.5.1-dev.5",
     "git": "010bc1fa795ac20e426ae8a4c4e9df6db21426f3",
     "mergedAs": "54d3f339bd587bc29832c3446762d9e4856495a7",

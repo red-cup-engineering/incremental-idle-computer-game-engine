@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORLDS} from '../src/worlds.mjs';
 import {MAX_POINTS,defineWorld,newRun,advanceActive,forecastProduction,
-  tap,buyProducer,buyUpgrade,prestige,incomePerSecond} from '@red-cup-engineering/incremental-idle-game/engine';
+  tap,buyProducer,buyUpgrade,prestige,incomePerSecond} from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 
 const world=defineWorld({...WORLDS[0],id:'forecast-fixture',offlineCapSeconds:60});
 const origin=137;

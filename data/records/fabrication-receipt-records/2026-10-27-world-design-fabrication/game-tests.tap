@@ -1,6 +1,6 @@
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 
-> @red-cup-engineering/incremental-idle-game@0.1.0 test
+> @red-cup-engineering/incremental-idle-computer-game-engine@0.1.0 test
 > node --test --test-reporter=tap
 
 TAP version 13

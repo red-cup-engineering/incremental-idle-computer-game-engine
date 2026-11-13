@@ -11,7 +11,7 @@ Red Cup Engineering's reusable **typed, declarative incremental-game engine** an
 
 ## Proposed package consumer contract
 
-The engine exposes three named ESM entrances: `@red-cup-engineering/incremental-idle-game/engine`, `/worlds`, and `/transactions`. They alias the existing source modules without a second implementation. `spendPoints` in `/transactions` is a clock-free bounded integer-point debit; call the engine's `advance` explicitly when time should pass. Spending does not complete action objectives or create production.
+The engine exposes three named ESM entrances: `@red-cup-engineering/incremental-idle-computer-game-engine/engine`, `/worlds`, and `/transactions`. They alias the existing source modules without a second implementation. `spendPoints` in `/transactions` is a clock-free bounded integer-point debit; call the engine's `advance` explicitly when time should pass. Spending does not complete action objectives or create production.
 
 Existing `/src/*`, `/scripts/*`, `/design/*` and `/package.json` paths remain accessible for known consumers. These are compatibility paths, not a promise that every internal file is a stable API. There is no root entrance. The package carrier includes source, authored designs, generation/build tools and native tests. Generated browser output, dependency trees, workflow files, historical qualification records and local artifacts are not package inputs. README and LICENSE remain included by npm.
 

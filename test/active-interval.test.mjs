@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORLDS} from '../src/worlds.mjs';
 import {MAX_POINTS,defineWorld,newRun,admitRun,advance,advanceActive,tap,buyProducer,
-  buyUpgrade,prestige} from '@red-cup-engineering/incremental-idle-game/engine';
+  buyUpgrade,prestige} from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 
 const world=defineWorld({...WORLDS[0],id:'active-interval-fixture',offlineCapSeconds:60});
 const origin=137;
