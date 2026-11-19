@@ -1,0 +1,152 @@
+{
+  "kind": "561.fabrication-qualification.v1",
+  "completedAt": "2026-10-27",
+  "repository": "red-cup-engineering/incremental-idle-game",
+  "base": "d833f6525c55e15ab74fd992dae8bef7803a30e2",
+  "scope": "Little Worlds design-to-ESM migration, independent game receiving, clean native supplier selection, and static build",
+  "source": [
+    {
+      "path": "README.md",
+      "sha256": "53471e759cd494e498ef4664981c3efa5e4221f2892607fd218fd72bfbdb7b35"
+    },
+    {
+      "path": "package.json",
+      "sha256": "5f691ce3f3cd022185211fd93346fcd69de4e2cb88d3215e4f42179983aa6c8d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5c79e9a5d071cfa16e23b7357e7e18d9fafae2d3bc1a2908ff633ff2de6f1390"
+    },
+    {
+      "path": "scripts/build.mjs",
+      "sha256": "9f4936476a1ee0e09b69279c511203e40bc2c4def0ceb3768cfba25249886ca0"
+    },
+    {
+      "path": "src/worlds.mjs",
+      "sha256": "4e3a2e8e712f23704d9987855b6a0512a871fde6cfb4c6ea5d6410679e5029bd"
+    },
+    {
+      "path": "test/build.test.mjs",
+      "sha256": "74e3aab755f71bb099f9ecc583f6f62663e9f311406a1c8f8317f7e64d4a0e00"
+    },
+    {
+      "path": ".github/workflows/design-fabrication.yml",
+      "sha256": "bda234aa99104e92d348da2508857230bf46e431d31fb5749d677bee34027224"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "790e3169bc19b046fe55ba1da6d13b976c28363c8c00462a2195fe5faf260910"
+    },
+    {
+      "path": ".npmrc",
+      "sha256": "8de08949bab508293e0d9aa76a511469ee2d306b1f6140a8f60c0d1de8b17fe2"
+    },
+    {
+      "path": "design/README.md",
+      "sha256": "46469689167fe8e7f618e008bc82f1fc221e6b562f4e8035724b26be3086563f"
+    },
+    {
+      "path": "design/world-catalog.json",
+      "sha256": "a612e86f3ec4205c7289275611aae570e11a7ffcb9c7be2742dc05a7bbbca08c"
+    },
+    {
+      "path": "design/world-catalog.schema.json",
+      "sha256": "f10e5481bff5a99fe54793b7917d3808bc0ecf6143800b8f33dac120a8612a71"
+    },
+    {
+      "path": "scripts/generate-worlds.mjs",
+      "sha256": "8e2d95405d63126da4f9da94b535febde8bb308222d400c5e4c08e13724f8662"
+    },
+    {
+      "path": "src/generated/world-definitions.mjs",
+      "sha256": "12d8640bb054bce0246e5d8245f3dbd5e38fdd238fef175c8819773ce35bec97"
+    },
+    {
+      "path": "test/design-fabrication.test.mjs",
+      "sha256": "a0039d4027cf59fa05045a2fa302044c7c4ed354c7be030bafca623a61ed1d51"
+    },
+    {
+      "path": "test/design-review.test.mjs",
+      "sha256": "393a4aee119b81923c32693fb2665e90746fc1e68fc204a15cd638be2d193218"
+    }
+  ],
+  "requirements": "design/README.md",
+  "supplier": {
+    "package": "@red-cup-engineering/jsnode-package-engineering-services-section",
+    "version": "0.5.1-dev.5",
+    "git": "010bc1fa795ac20e426ae8a4c4e9df6db21426f3",
+    "mergedAs": "54d3f339bd587bc29832c3446762d9e4856495a7",
+    "installedAsSymlink": false,
+    "verifiedSources": [
+      {
+        "path": "src/project-jsnode-modules.mjs",
+        "sha256": "4cd08c942a099ca6c1c01dd65ad03657f86b0ecc23476295fba4811f7d0cfa10"
+      },
+      {
+        "path": "src/project-jsnode-data-modules.mjs",
+        "sha256": "570d815765dc96779f7e41b6e3b9949848a07503f0c749e186616e97138cf2b4"
+      },
+      {
+        "path": "data/records/schema/jsnode-module-specification.schema.json",
+        "sha256": "b65d4c5678351a8716d7cd4d1381dd9786f86bfcb3b6b518266d07c42b596020"
+      }
+    ]
+  },
+  "dependencyReceiving": {
+    "packageManager": "npm 11.9.0",
+    "node": "24.22.1",
+    "lockfile": "package-lock.json",
+    "lockfileVersion": 3,
+    "records": 138,
+    "nativeLockProduced": true,
+    "cleanInstall": true,
+    "packagesAdded": 137,
+    "installExitCode": 0,
+    "lifecycleScriptsDisabled": false,
+    "command": "NODE_DISABLE_COMPILE_CACHE=1 TMPDIR=<task tmp> npm ci --no-audit --no-fund --fetch-retries=1 --fetch-timeout=30000 --maxsockets=1 --cache=<task cache>",
+    "nativeCanonicalTransport": "npm retained the exact Git commit and canonicalized resolved transport to git+ssh in its unedited lockfile."
+  },
+  "checks": [
+    {
+      "command": "npm run check:generated",
+      "exitCode": 0
+    },
+    {
+      "command": "npm test -- --test-reporter=tap",
+      "result": {
+        "tests": 47,
+        "passed": 47,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "log": "game-tests.tap"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "receipt": "static-build-receipt.json"
+    }
+  ],
+  "independentReceiving": {
+    "separateAssayAuthor": true,
+    "reviewCounterexample": "Raw-byte reading and fatal UTF-8 decoding are required for exact design/source receipts and freshness checks; permissive text decoding could normalize malformed bytes.",
+    "scenarios": [
+      "Existing world catalog equivalence",
+      "New third world through unchanged progression engine",
+      "Authored income change through runtime transition",
+      "Unknown/malformed/out-of-range design refusal",
+      "Stale or missing generated source refuses actual build before effects",
+      "Unchanged generation preserves bytes and timestamps",
+      "Existing save, return, offline cap and prestige behavior",
+      "Built ESM imports and artifact hashes"
+    ]
+  },
+  "sourceReceiving": "All sixteen candidate files matched the clean installed receiving tree byte for byte.",
+  "limits": [
+    "The produced static app and receipt do not establish public hosting or human player acceptance.",
+    "No production route is declared by this game's existing source.",
+    "The design mechanism preserves the original rules during this migration; future rules changes require explicit existing-save compatibility assessment."
+  ]
+}

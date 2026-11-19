@@ -1,0 +1,158 @@
+[
+  {
+    "kind": "561.incremental-idle-world/v1",
+    "id": "trace-garden",
+    "label": "Trace Garden",
+    "description": "Turn single marks into a sprawling, self-writing garden of patterns. An original, nonmonetary incremental game.",
+    "unit": "marks",
+    "verb": "Make a mark",
+    "offlineCapSeconds": 21600,
+    "prestigeThreshold": 2500,
+    "producers": [
+      {
+        "id": "pencil",
+        "label": "Patient pencil",
+        "baseCost": 10,
+        "ratePerSecond": 1,
+        "growthBasisPoints": 11800,
+        "unlockAt": 0
+      },
+      {
+        "id": "press",
+        "label": "Printing press",
+        "baseCost": 90,
+        "ratePerSecond": 7,
+        "growthBasisPoints": 12300,
+        "unlockAt": 60
+      },
+      {
+        "id": "loom",
+        "label": "Pattern loom",
+        "baseCost": 750,
+        "ratePerSecond": 42,
+        "growthBasisPoints": 12600,
+        "unlockAt": 400
+      },
+      {
+        "id": "archive",
+        "label": "Living archive",
+        "baseCost": 6400,
+        "ratePerSecond": 230,
+        "growthBasisPoints": 13000,
+        "unlockAt": 2200
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "ink",
+        "label": "Fresh ink · +4 per tap",
+        "cost": 35,
+        "unlockAt": 20,
+        "effect": "tap",
+        "amount": 4
+      },
+      {
+        "id": "binding",
+        "label": "Shared bindings · +50% idle output",
+        "cost": 240,
+        "unlockAt": 120,
+        "effect": "production",
+        "amount": 50
+      },
+      {
+        "id": "stylus",
+        "label": "Precision stylus · +24 per tap",
+        "cost": 1100,
+        "unlockAt": 500,
+        "effect": "tap",
+        "amount": 24
+      },
+      {
+        "id": "pattern",
+        "label": "Repeatable patterns · +100% idle output",
+        "cost": 3500,
+        "unlockAt": 1800,
+        "effect": "production",
+        "amount": 100
+      }
+    ]
+  },
+  {
+    "kind": "561.incremental-idle-world/v1",
+    "id": "pocket-observatory",
+    "label": "Pocket Observatory",
+    "description": "Start with a single signal and grow a humming observatory. Your receivers keep collecting while you are away.",
+    "unit": "signals",
+    "verb": "Observe a signal",
+    "offlineCapSeconds": 10800,
+    "prestigeThreshold": 4000,
+    "producers": [
+      {
+        "id": "antenna",
+        "label": "Tin-can antenna",
+        "baseCost": 8,
+        "ratePerSecond": 1,
+        "growthBasisPoints": 12200,
+        "unlockAt": 0
+      },
+      {
+        "id": "relay",
+        "label": "Backyard relay",
+        "baseCost": 160,
+        "ratePerSecond": 13,
+        "growthBasisPoints": 12500,
+        "unlockAt": 90
+      },
+      {
+        "id": "array",
+        "label": "Mirror array",
+        "baseCost": 1200,
+        "ratePerSecond": 65,
+        "growthBasisPoints": 12800,
+        "unlockAt": 600
+      },
+      {
+        "id": "satellite",
+        "label": "Tiny satellite",
+        "baseCost": 9200,
+        "ratePerSecond": 330,
+        "growthBasisPoints": 13200,
+        "unlockAt": 3000
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "lens",
+        "label": "Clean lens · +6 per tap",
+        "cost": 45,
+        "unlockAt": 25,
+        "effect": "tap",
+        "amount": 6
+      },
+      {
+        "id": "gain",
+        "label": "Signal amplifier · +75% idle output",
+        "cost": 360,
+        "unlockAt": 200,
+        "effect": "production",
+        "amount": 75
+      },
+      {
+        "id": "dish",
+        "label": "Parabolic dish · +30 per tap",
+        "cost": 1450,
+        "unlockAt": 700,
+        "effect": "tap",
+        "amount": 30
+      },
+      {
+        "id": "correlator",
+        "label": "Correlator · +120% idle output",
+        "cost": 5200,
+        "unlockAt": 2400,
+        "effect": "production",
+        "amount": 120
+      }
+    ]
+  }
+]
