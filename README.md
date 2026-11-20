@@ -143,8 +143,10 @@ upgrade/prestige rounding and income cap as the actual engine.
 
 - `requested` is an integer from 0 through 100 or `'max'` (at most 100 units).
   Batches remain partial: buy as many as the balance and level cap permit.
-  Zero, unknown, locked, capped and unaffordable requests retain the command's
-  existing refusal reasons and validation order.
+  A next unit priced above the maximum bank balance returns `price-cap` from
+  the forecast, quote and purchase command. A unit within the limit returns
+  `insufficient-points` when the current balance cannot cover it. Buying the
+  final affordable unit still succeeds, even when a larger batch was requested.
 - The quote never settles time. Call `advance`, `advanceActive` or `project`
   explicitly first if a current observation should affect the balance. This
   keeps wall clocks and active-time policy with the caller.

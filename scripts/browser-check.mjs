@@ -43,5 +43,28 @@ export async function check({ evaluate, wait, click, reload }) {
   assert.equal(retained.banked, fresh.banked);
   assert.equal(retained.allTime, fresh.allTime);
   assert.equal(retained.prestige, fresh.prestige);
-  return { title: setup.title, offlineSeconds: setup.cap, restoredPrestige: fresh.prestige, excessBalanceRefused: true };
+  // Import a bounded late-game fixture, then buy its last possible producer through the HUD.
+  const limit = await evaluate(async ({run, id}) => {
+    const {worldById} = await import('/assets/worlds.mjs');
+    const {producerPrice, MAX_POINTS} = await import('/assets/engine.mjs');
+    const p = worldById(run.worldId).producers.find(p => p.id === id);
+    let owned = 0;
+    while (producerPrice(p, owned + 1) <= MAX_POINTS) owned++;
+    run.banked = run.runProduced = run.allTime = MAX_POINTS;
+    run.producers[id] = owned;
+    run.lastMs = Date.now();
+    document.querySelector('#save-data').value = JSON.stringify(run);
+    return {label: p.label, owned: owned + 1};
+  }, {run: fresh, id: setup.producer});
+  await click('#import');
+  await click('[aria-label="Buy max: ' + limit.label + '"]');
+  await reload();
+  await wait(id => document.getElementById('preview-' + id + '-max')?.textContent.includes('price exceeds the balance limit'), setup.producer);
+  assert.ok(await evaluate(label => [1, 10, 'max'].every(n =>
+    document.querySelector('[aria-label="Buy ' + n + ': ' + label + '"]').disabled), limit.label));
+  await click('#export');
+  const capped = JSON.parse(await evaluate(() => document.querySelector('#save-data').value));
+  assert.equal(capped.producers[setup.producer], limit.owned);
+  assert.equal(capped.prestige, fresh.prestige);
+  return { priceCeilingAt: limit.owned, title: setup.title, offlineSeconds: setup.cap, restoredPrestige: fresh.prestige, excessBalanceRefused: true };
 }

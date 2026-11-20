@@ -267,6 +267,13 @@ function forecastPurchaseRequirements(world,interval,cost,unlockAt,fromMs,toMs,r
     ...(reason?{reason}:{})};
 }
 
+// A producer can reach the bank's price ceiling before its level limit.
+function nextProducerOffer(producer, owned) {
+  if (owned >= MAX_LEVEL) return {cost: null, reason: 'level-cap'};
+  const cost = producerPrice(producer, owned);
+  return {cost, reason: cost > MAX_POINTS ? 'price-cap' : undefined};
+}
+
 /** Read-only readiness for the next single producer, including its unlock.
  * Both requirements must hold at the same native tick. The interval has the
  * advanceActive contract; waitMs may exceed it, but readyAtMs never does.
@@ -276,10 +283,8 @@ export function forecastProducerPurchase(world,candidate,id,fromMs,toMs) {
   const interval=admitActiveInterval(world,candidate,fromMs,toMs);
   const producer=world.producers.find(p=>p.id===id);
   if(!producer) return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'unknown-producer');
-  if(interval.state.producers[id]>=MAX_LEVEL)
-    return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'level-cap');
-  const cost=producerPrice(producer,interval.state.producers[id]);
-  return forecastPurchaseRequirements(world,interval,cost,producer.unlockAt,fromMs,toMs,cost>MAX_POINTS?'price-cap':undefined);
+  const {cost, reason} = nextProducerOffer(producer, interval.state.producers[id]);
+  return forecastPurchaseRequirements(world,interval,cost,cost === null ? null : producer.unlockAt,fromMs,toMs,reason);
 }
 
 /** Read-only readiness for one unowned upgrade, including its unlock. Uses the
@@ -309,7 +314,9 @@ function planProducerPurchase(world,state,id,requested) {
   const quantity=requested==='max' ? 100 : boundedNatural(requested,'requested',100);
   if (quantity===0) return {accepted:false,reason:'zero-quantity'};
   let owned=state.producers[id], balance=state.banked, spent=0, bought=0;
-  let price=BigInt(producerPrice(p,owned));
+  const offer = nextProducerOffer(p, owned);
+  if (offer.reason) return {accepted:false, reason:offer.reason};
+  let price=BigInt(offer.cost);
   const growth=BigInt(p.growthBasisPoints);
   while (bought<quantity && owned<MAX_LEVEL) {
     if (price>BigInt(balance)) break;
@@ -317,7 +324,7 @@ function planProducerPurchase(world,state,id,requested) {
     balance-=cost; spent+=cost; bought++; owned++;
     price=nextProducerPrice(price,growth);
   }
-  if (bought===0) return {accepted:false,reason:owned===MAX_LEVEL?'level-cap':'insufficient-points'};
+  if (bought===0) return {accepted:false,reason:'insufficient-points'};
   return {accepted:true,count:bought,spent,balance,owned};
 }
 
