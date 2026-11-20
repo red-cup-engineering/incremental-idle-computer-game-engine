@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { generateWorlds } from './generate-worlds.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const supplier='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
-const saveSupplier='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
+const provider='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
+const saveProvider='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 const src=path=>join(root,'src',path);
 
 export async function build(out = join(root,'dist')) {
@@ -15,16 +15,16 @@ export async function build(out = join(root,'dist')) {
   // Capture and check the authored design before producing any build output.
   const fabrication=await generateWorlds({check:true,root});
   const engine=await readFile(src('engine.mjs'),'utf8');
-  if (!engine.includes(`'${supplier}'`)) throw new Error('game engine must import canonical data clock');
+  if (!engine.includes(`'${provider}'`)) throw new Error('game engine must import canonical data clock');
   const assets=await Promise.all(['worlds.mjs','style.css'].map(async name=>[name,await readFile(src(name))]));
   const browser=await readFile(src('browser.mjs'),'utf8');
-  if (!browser.includes(`'${saveSupplier}'`)) throw new Error('browser custody must use its declared save supplier');
-  const saveWriter=await readFile(fileURLToPath(import.meta.resolve(saveSupplier)));
-  const clock=await readFile(fileURLToPath(import.meta.resolve(supplier)));
+  if (!browser.includes(`'${saveProvider}'`)) throw new Error('browser custody must use its declared save supplier');
+  const saveWriter=await readFile(fileURLToPath(import.meta.resolve(saveProvider)));
+  const clock=await readFile(fileURLToPath(import.meta.resolve(provider)));
   await mkdir(join(dest,'assets','generated'),{recursive:true});
-  await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${supplier}'`,`'./discrete-clock.mjs'`));
+  await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${provider}'`,`'./discrete-clock.mjs'`));
   for (const [name,bytes] of assets) await writeFile(join(dest,'assets',name),bytes);
-  await writeFile(join(dest,'assets','browser.mjs'),browser.replace(`'${saveSupplier}'`,`'./verified-save-write.mjs'`));
+  await writeFile(join(dest,'assets','browser.mjs'),browser.replace(`'${saveProvider}'`,`'./verified-save-write.mjs'`));
   await writeFile(join(dest,'assets','verified-save-write.mjs'),saveWriter);
   await writeFile(join(dest,'assets','generated','world-definitions.mjs'),fabrication.files[0].text);
   await writeFile(join(dest,'assets','discrete-clock.mjs'),clock);
@@ -52,14 +52,14 @@ export async function build(out = join(root,'dist')) {
   const files=['index.html','assets/engine.mjs','assets/discrete-clock.mjs','assets/worlds.mjs','assets/generated/world-definitions.mjs','assets/browser.mjs','assets/verified-save-write.mjs','assets/style.css','_headers'];
   const digest=bytes=>'sha256:'+createHash('sha256').update(bytes).digest('hex');
   const manifest=await Promise.all(files.map(async path=>({path,digest:digest(await readFile(join(dest,path)))})));
-  const receipt={kind:'561.incremental-idle-fabrication-receipt/v1',
+  const record={kind:'561.incremental-idle-fabrication-receipt/v1',
     design:fabrication.design,generated:fabrication.generated,
     producer:fabrication.producer,
-    supplier:{specifier:supplier,digest:digest(clock)},
-    browserSupplier:{specifier:saveSupplier,digest:digest(saveWriter)},artifacts:manifest,
+    supplier:{specifier:provider,digest:digest(clock)},
+    browserSupplier:{specifier:saveProvider,digest:digest(saveWriter)},artifacts:manifest,
     receiving:'Deterministic design admission and static build; public deployment and player receiving are separate.'};
-  await writeFile(join(dest,'fabrication-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
-  return {dest,files:[...files,'fabrication-receipt.json'],receipt};
+  await writeFile(join(dest,'fabrication-receipt.json'),JSON.stringify(record,null,2)+'\n');
+  return {dest,files:[...files,'fabrication-receipt.json'],receipt: record};
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const index=process.argv.indexOf('--out');
