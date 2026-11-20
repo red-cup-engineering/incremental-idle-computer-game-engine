@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { buildBrowserBundle } from '@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section/browser-bundle';
 import { generateWorlds } from './generate-worlds.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const supplier='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
@@ -24,7 +25,13 @@ export async function build(out = join(root,'dist')) {
   await mkdir(join(dest,'assets','generated'),{recursive:true});
   await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${supplier}'`,`'./discrete-clock.mjs'`));
   for (const [name,bytes] of assets) await writeFile(join(dest,'assets',name),bytes);
-  await writeFile(join(dest,'assets','browser.mjs'),browser.replace(`'${saveSupplier}'`,`'./verified-save-write.mjs'`));
+  await buildBrowserBundle({
+    absWorkingDir: root,
+    stdin: { contents: browser.replace(`'${saveSupplier}'`, "'./verified-save-write.mjs'"), resolveDir: src(''), sourcefile: 'browser.mjs' },
+    // These public modules are also stand-alone entries in the fabrication receipt.
+    external: ['./engine.mjs', './worlds.mjs', './verified-save-write.mjs'],
+    outfile: join(dest, 'assets/browser.mjs'), bundle: true, format: 'esm', platform: 'browser', target: 'es2022',
+  });
   await writeFile(join(dest,'assets','verified-save-write.mjs'),saveWriter);
   await writeFile(join(dest,'assets','generated','world-definitions.mjs'),fabrication.files[0].text);
   await writeFile(join(dest,'assets','discrete-clock.mjs'),clock);

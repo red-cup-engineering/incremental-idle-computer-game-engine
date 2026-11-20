@@ -1,5 +1,7 @@
+import { createRulePlayer } from '@red-cup-engineering/game-engine/running/rules';
+import { idleRules } from './play.mjs';
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, project, tap, buyProducer, buyUpgrade, prestige, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRun, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -7,7 +9,7 @@ const format = new Intl.NumberFormat('en-US', { maximumFractionDigits:0, notatio
 const exact = new Intl.NumberFormat('en-US', { maximumFractionDigits:0 });
 const storageKey = id => `561-incremental-idle:${id}:v1`;
 const pick = new URLSearchParams(location.search).get('world');
-let world=worldById(pick) ?? WORLDS[0], state, slot, blocked=false, resetArmed=false, replantArmed=false;
+let world=worldById(pick) ?? WORLDS[0], player, slot, blocked=false, resetArmed=false, replantArmed=false;
 // At most the declared worlds. These page-local runs are not durable backups.
 // Keeping them prevents a failed save followed by a world switch losing play.
 const runs=new Map();
@@ -37,13 +39,21 @@ function cancelReplant() {
   $('cancel-prestige').disabled=true;
 }
 
+// These local titles reset the balance at prestige. A saved browser run can spend
+// only points earned since that reset; simulations using the engine may model other balances.
+function admitSavedRun(current, candidate) {
+  const run = admitRun(current, candidate);
+  if (run.banked > run.runProduced) throw new TypeError('saved balance exceeds production this run');
+  return run;
+}
+
 function readSaved(current) {
   if (runs.has(current.id)) return runs.get(current.id);
   const entry={state:newRun(current,Date.now()),expected:null,raw:null,blocked:false,conflicted:false,error:''};
   try {
     entry.raw=localStorage.getItem(storageKey(current.id));
     entry.expected=entry.raw;
-    if (entry.raw!==null) entry.state=admitRun(current,JSON.parse(entry.raw));
+    if (entry.raw!==null) entry.state=admitSavedRun(current,JSON.parse(entry.raw));
   } catch {
     entry.blocked=true;
     entry.error='The saved run could not be read. It has not been replaced.';
@@ -66,6 +76,7 @@ function failedWrite(result) {
   showSaveStatus();
 }
 function save() {
+  const state=player.position;
   slot.state=state;
   if (blocked) {showSaveStatus();return false;}
   try {
@@ -84,8 +95,8 @@ function save() {
   }
 }
 function adoptSaved(next,raw) {
-  state=next;blocked=false;cancelReset();cancelReplant();
-  Object.assign(slot,{state,expected:raw,raw,blocked:false,conflicted:false,error:''});
+  player=createRulePlayer(idleRules(world),{seed:next});blocked=false;cancelReset();cancelReplant();
+  Object.assign(slot,{state:player.position,expected:raw,raw,blocked:false,conflicted:false,error:''});
   $('reset').textContent='Reset this world';
 }
 function el(tag,cls,text) {
@@ -107,6 +118,7 @@ function waitLabel(milliseconds) {
   return [hours?`${hours}h`:'',minutes?`${minutes}m`:'',rest?`${rest}s`:''].filter(Boolean).join(' ') || '0s';
 }
 function purchaseReadiness(kind,item,now) {
+  const state=player.position;
   const cost=kind==='producer'?item.nextCost:item.cost;
   if(cost>MAX_POINTS) return 'Price exceeds the balance limit; no further purchase is possible.';
   const missingProduced=Math.max(0,item.unlockAt-state.runProduced);
@@ -130,6 +142,7 @@ function readinessNode(id,content) {
   return `readiness-${id}`;
 }
 function renderPrestige() {
+  const state=player.position;
   // Quote the current admitted run. Normal rendering settles time; opening
   // review does not. Confirmation uses the native command and its current clock.
   const quote=quotePrestige(world,state),button=$('prestige');
@@ -159,7 +172,7 @@ function renderPrestige() {
 }
 function installWorld(next) {
   world=next;
-  slot=readSaved(world);state=slot.state;blocked=slot.blocked;
+  slot=readSaved(world);player=createRulePlayer(idleRules(world),{seed:slot.state});blocked=slot.blocked;
   cancelReset();cancelReplant();
   if (blocked) {
     status(`This ${world.label} save cannot be read. It has NOT been replaced. Export it or explicitly clear it to start again.`);
@@ -199,7 +212,7 @@ function installWorld(next) {
       }
       b.setAttribute('aria-describedby',describedBy);
       b.addEventListener('click',()=>{
-        const result=buyProducer(world,state,p.id,count,Date.now());
+        const result=player.play({kind:'attempt-producer',id:p.id,count,nowMs:Date.now()});
         act(result,`Purchased ${result.count} × ${p.label} for ${exact.format(result.spent)} ${world.unit}.`);
       });
       controls.append(b);
@@ -218,14 +231,13 @@ function installWorld(next) {
     const button=el('button','secondary','');button.type='button';
     button.setAttribute('aria-label',`Buy: ${u.label}`);
     button.setAttribute('aria-describedby',`${description} preview-upgrade-${u.id}`);
-    button.addEventListener('click',()=>act(buyUpgrade(world,state,u.id,Date.now()),`Installed ${u.label} for ${exact.format(u.cost)} ${world.unit}.`));
+    button.addEventListener('click',()=>act(player.play({kind:'attempt-upgrade',id:u.id,nowMs:Date.now()}),`Installed ${u.label} for ${exact.format(u.cost)} ${world.unit}.`));
     row.append(button);upgrades.append(row);btns.upgrades.set(u.id,button);
   }
   render();
 }
 function act(result,acceptedText) {
   cancelReset();cancelReplant();
-  state=result.state;
   status(result.accepted ? acceptedText : `Not available: ${result.reason.replaceAll('-',' ')}.`);
   save();render();
 }
@@ -245,8 +257,8 @@ function render() {
     for(const node of btns.upgradePreviews.values()) node.textContent='Load a valid save to preview this upgrade.';
     showSaveStatus();return;
   }
-  const now=Date.now(),view=project(world,state,now);
-  state=view.state;
+  const now=Date.now(),view=player.play({kind:'observe',nowMs:now});
+  const state=player.position;
   $('banked').textContent=format.format(state.banked);
   $('rate').textContent=`${format.format(view.rate)} / sec`;
   $('tap-yield').textContent=`+${format.format(view.tapYield)} per action`;
@@ -294,18 +306,18 @@ function render() {
   if(view.discardedSeconds>0) status(`Welcome back! Collected ${format.format(view.gained)} ${world.unit} for ${view.seconds} seconds; time beyond the offline cap was discarded.`);
   save();
 }
-$('tap').addEventListener('click',()=>{ if(!blocked) {const outcome=tap(world,state,Date.now());act(outcome,`+${format.format(outcome.gained)} ${world.unit} collected.`);} });
+$('tap').addEventListener('click',()=>{ if(!blocked) {const outcome=player.play({kind:'tap',nowMs:Date.now()});act(outcome,`+${format.format(outcome.gained)} ${world.unit} collected.`);} });
 $('prestige').addEventListener('click',()=>{
   if(blocked)return;
   cancelReset();
   if(replantArmed)return;
-  if(!quotePrestige(world,state).accepted){status('Replant is not available. Check the current preview.');return;}
+  if(!quotePrestige(world,player.position).accepted){status('Replant is not available. Check the current preview.');return;}
   replantArmed=true;renderPrestige();
   status(`Review ${world.label}’s reset costs below. Confirm replanting to trade this run for permanent sparks, or cancel to keep growing. The preview updates as production continues.`);
 });
 $('confirm-prestige').addEventListener('click',()=>{
   if(blocked || !replantArmed)return;
-  const outcome=prestige(world,state,Date.now());
+  const outcome=player.play({kind:'attempt-prestige',nowMs:Date.now()});
   act(outcome,outcome.accepted?`Replanted. +${outcome.awarded} permanent sparks; next run is faster.`:'');
   $('tap').focus();
 });
@@ -351,7 +363,7 @@ $('export').addEventListener('click',()=>{
   try {
     // Never export stale persisted bytes in place of an admitted live run.
     // A blocked placeholder is not progress and must never be exported as such.
-    const raw=blocked ? slot.raw ?? localStorage.getItem(storageKey(world.id)) : JSON.stringify(state);
+    const raw=blocked ? slot.raw ?? localStorage.getItem(storageKey(world.id)) : JSON.stringify(player.position);
     if(raw===null) throw new Error('No original save text is available');
     $('save-data').value=raw;$('save-data').focus();$('save-data').select();
     status(blocked?'Original unreadable save text is in the field; copy it before replacing it.':'Current live run is in the field; copy it somewhere safe. This does not save it automatically.');
@@ -369,7 +381,7 @@ $('retry-save').addEventListener('click',()=>{
     // Keep the first observed damaged text available even when the initial
     // read threw. Later failed retries must not replace that recovery copy.
     slot.raw ??= raw;
-    next=admitRun(world,JSON.parse(raw));
+    next=admitSavedRun(world,JSON.parse(raw));
   } catch {status('The saved run still cannot be read. Nothing was replaced. Export the original text or import a valid backup.');return;}
   adoptSaved(next,raw);
   // Normal rendering settles capped offline time and attempts the existing
@@ -379,7 +391,7 @@ $('retry-save').addEventListener('click',()=>{
 $('import').addEventListener('click',()=>{
   cancelReset();cancelReplant();
   let parsed;
-  try {parsed=admitRun(world,JSON.parse($('save-data').value));}
+  try {parsed=admitSavedRun(world,JSON.parse($('save-data').value));}
   catch {status('Import refused. No save was written and the current run is unchanged.');return;}
   const raw=JSON.stringify(parsed),result=writeSave(raw);
   if(!result.ok){failedWrite(result);status('Import could not be verified. No replacement was adopted; storage may have changed.');return;}
