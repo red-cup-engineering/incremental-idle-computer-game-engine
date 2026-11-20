@@ -118,7 +118,7 @@ export function newRun(world, nowMs) {
 }
 
 /** Fail closed for malformed, incompatible or truncated stored runs. */
-export function validateRun(world, state) {
+export function admitRun(world, state) {
   if (!state || typeof state !== 'object' || Array.isArray(state) || state.kind !== (world.prestigeObjectives ? OBJECTIVE_STATE_KIND : STATE_KIND) || state.worldId !== world.id)
     throw new TypeError('saved game belongs to another world or version');
   for (const k of ['lastMs','banked','runProduced','allTime','prestige','taps'])
@@ -194,7 +194,7 @@ function accrueTime(world, state, time) {
 }
 
 export function advance(world, candidate, nowMs) {
-  const state = validateRun(world,candidate);
+  const state = admitRun(world,candidate);
   return accrueTime(world,state,elapsedTicks(state.lastMs,nowMs,{maxElapsedMs:world.offlineCapSeconds*1000}));
 }
 
@@ -203,8 +203,8 @@ export function advance(world, candidate, nowMs) {
  * time mapping. fromMs is the last active observation, not a new clock origin.
  * Unlike advance, an oversized or backward active interval is refused.
  */
-function validateActiveInterval(world, candidate, fromMs, toMs) {
-  const state = validateRun(world,candidate);
+function admitActiveInterval(world, candidate, fromMs, toMs) {
+  const state = admitRun(world,candidate);
   boundedNatural(fromMs,'fromMs');
   boundedNatural(toMs,'toMs');
   const carriedMs = fromMs-state.lastMs;
@@ -216,7 +216,7 @@ function validateActiveInterval(world, candidate, fromMs, toMs) {
 }
 
 export function advanceActive(world, candidate, fromMs, toMs) {
-  const {state,carriedMs,capMs}=validateActiveInterval(world,candidate,fromMs,toMs);
+  const {state,carriedMs,capMs}=admitActiveInterval(world,candidate,fromMs,toMs);
   return accrueTime(world,state,elapsedTicks(state.lastMs,toMs,{maxElapsedMs:capMs+carriedMs}));
 }
 
@@ -228,7 +228,7 @@ export function advanceActive(world, candidate, fromMs, toMs) {
  * reached. Unsafe duration estimates are null, never rounded timestamps.
  */
 export function forecastProduction(world,candidate,target,fromMs,toMs) {
-  const {state,carriedMs}=validateActiveInterval(world,candidate,fromMs,toMs);
+  const {state,carriedMs}=admitActiveInterval(world,candidate,fromMs,toMs);
   boundedNatural(target,'target');
   const missing=Math.max(0,target-state.banked),rate=incomePerSecond(world,state);
   return {missing,rate,...forecastWait(missing,rate,carriedMs,fromMs,toMs,target<=MAX_POINTS)};
@@ -266,7 +266,7 @@ function forecastPurchaseRequirements(world,interval,cost,unlockAt,fromMs,toMs,r
  * No purchase, reservation, batch commitment or future rate change is implied.
  */
 export function forecastProducerPurchase(world,candidate,id,fromMs,toMs) {
-  const interval=validateActiveInterval(world,candidate,fromMs,toMs);
+  const interval=admitActiveInterval(world,candidate,fromMs,toMs);
   const producer=world.producers.find(p=>p.id===id);
   if(!producer) return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'unknown-producer');
   if(interval.state.producers[id]>=MAX_LEVEL)
@@ -280,7 +280,7 @@ export function forecastProducerPurchase(world,candidate,id,fromMs,toMs) {
  * as producer readiness. An actual command settles time and checks again.
  */
 export function forecastUpgradePurchase(world,candidate,id,fromMs,toMs) {
-  const interval=validateActiveInterval(world,candidate,fromMs,toMs);
+  const interval=admitActiveInterval(world,candidate,fromMs,toMs);
   const upgrade=world.upgrades.find(u=>u.id===id);
   if(!upgrade) return forecastPurchaseRequirements(world,interval,null,null,fromMs,toMs,'unknown-upgrade');
   return forecastPurchaseRequirements(world,interval,upgrade.cost,upgrade.unlockAt,fromMs,toMs,
@@ -320,7 +320,7 @@ function planProducerPurchase(world,state,id,requested) {
  * an actual command always recomputes and never accepts a quote as authority.
  */
 export function quoteProducerPurchase(world,candidate,id,requested) {
-  const state=validateRun(world,candidate), plan=planProducerPurchase(world,state,id,requested);
+  const state=admitRun(world,candidate), plan=planProducerPurchase(world,state,id,requested);
   if (!plan.accepted) return {...plan,count:0,spent:0,rateGain:0};
   const after={...state,producers:{...state.producers,[id]:plan.owned}};
   return {accepted:true,count:plan.count,spent:plan.spent,
@@ -351,7 +351,7 @@ function planUpgradePurchase(world,state,id) {
  * explicitly when needed; a command recomputes rather than trusting a quote.
  */
 export function quoteUpgradePurchase(world,candidate,id) {
-  const state=validateRun(world,candidate), plan=planUpgradePurchase(world,state,id);
+  const state=admitRun(world,candidate), plan=planUpgradePurchase(world,state,id);
   if (!plan.accepted) return {...plan,spent:0,rateGain:0,tapGain:0};
   const after={...state,upgrades:{...state.upgrades,[id]:true}};
   return {accepted:true,spent:plan.spent,
@@ -395,7 +395,7 @@ function prestigeReset(world,state,awarded) {
  * or reservations. A command settles time and recomputes its award afresh.
  */
 export function quotePrestige(world,candidate) {
-  const state=validateRun(world,candidate),productionAward=productionPrestige(world,state);
+  const state=admitRun(world,candidate),productionAward=productionPrestige(world,state);
   const remainingCapacity=MAX_PRESTIGE-state.prestige;
   const missingObjectives=(world.prestigeObjectives ?? []).filter(o=>state.objectiveProgress[o.id]<o.count)
     .map(({id,label,count})=>({id,label,progress:state.objectiveProgress[id],count}));
