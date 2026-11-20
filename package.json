@@ -1,6 +1,6 @@
 {
   "name": "@red-cup-engineering/incremental-idle-computer-game-engine",
-  "version": "0.1.1-dev.1",
+  "version": "0.1.1-dev.2",
   "private": true,
   "type": "module",
   "description": "Two complete local-only idle games over one declarative progression engine.",
@@ -17,7 +17,7 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "test:engine": "node --test test/active-interval.test.mjs test/engine.test.mjs test/prestige-quotes.test.mjs test/producer-prices.test.mjs test/production-arithmetic.test.mjs test/production-forecast.test.mjs test/purchase-forecast.test.mjs test/purchase-quotes.test.mjs test/transactions.test.mjs test/upgrade-quotes.test.mjs test/objectives.test.mjs test/world-admission.test.mjs",
+    "test:engine": "node --test test/active-interval.test.mjs test/engine.test.mjs test/prestige-quotes.test.mjs test/producer-prices.test.mjs test/production-arithmetic.test.mjs test/production-graph.test.mjs test/production-forecast.test.mjs test/purchase-forecast.test.mjs test/purchase-quotes.test.mjs test/transactions.test.mjs test/upgrade-quotes.test.mjs test/objectives.test.mjs test/world-admission.test.mjs",
     "generate": "node scripts/generate-worlds.mjs",
     "check:generated": "node scripts/generate-worlds.mjs --check",
     "build": "node scripts/build.mjs"
@@ -35,6 +35,7 @@
   },
   "exports": {
     "./engine": "./src/engine.mjs",
+    "./production-graph": "./src/production-graph.mjs",
     "./production-spectrum": "./src/production-spectrum.mjs",
     "./worlds": "./src/worlds.mjs",
     "./transactions": "./src/transactions.mjs",
