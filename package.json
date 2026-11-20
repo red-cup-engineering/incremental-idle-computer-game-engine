@@ -1,6 +1,6 @@
 {
   "name": "@red-cup-engineering/incremental-idle-computer-game-engine",
-  "version": "0.1.1-dev.0",
+  "version": "0.1.1-dev.1",
   "private": true,
   "type": "module",
   "description": "Two complete local-only idle games over one declarative progression engine.",

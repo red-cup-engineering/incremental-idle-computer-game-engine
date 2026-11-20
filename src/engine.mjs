@@ -151,6 +151,13 @@ export function admitRun(world, state) {
   return {...state,...(world.prestigeObjectives ? {objectiveProgress:{...state.objectiveProgress}} : {}),producers:{...state.producers},upgrades:{...state.upgrades}};
 }
 
+/** Admit a save for a title that starts each run empty and spends only that run's production. */
+export function admitRunWithEarnedBalance(world, candidate) {
+  const run = admitRun(world, candidate);
+  if (run.banked > run.runProduced) throw new TypeError('saved balance exceeds production this run');
+  return run;
+}
+
 function nextProducerPrice(price, growth) {
   return (price * growth + 9999n) / 10000n;
 }

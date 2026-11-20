@@ -33,5 +33,15 @@ export async function check({ evaluate, wait, click, reload }) {
   assert.ok(fresh.prestige > 0);
   assert.equal(fresh.banked, 0);
   assert.equal(fresh.producers[setup.producer], 0);
-  return { title: setup.title, offlineSeconds: setup.cap, restoredPrestige: fresh.prestige };
+  const excess = {...fresh, banked: fresh.runProduced + 1};
+  assert.ok(excess.banked <= excess.allTime);
+  await evaluate(raw => { document.querySelector('#save-data').value = raw; }, JSON.stringify(excess));
+  await click('#import');
+  await wait(() => document.querySelector('#status').textContent.includes('Import refused'));
+  await click('#export');
+  const retained = JSON.parse(await evaluate(() => document.querySelector('#save-data').value));
+  assert.equal(retained.banked, fresh.banked);
+  assert.equal(retained.allTime, fresh.allTime);
+  assert.equal(retained.prestige, fresh.prestige);
+  return { title: setup.title, offlineSeconds: setup.cap, restoredPrestige: fresh.prestige, excessBalanceRefused: true };
 }

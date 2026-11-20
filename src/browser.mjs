@@ -1,7 +1,7 @@
 import { createRulePlayer } from '@red-cup-engineering/game-engine/running/rules';
 import { idleRules } from './play.mjs';
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRun, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, admitRunWithEarnedBalance, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -39,21 +39,13 @@ function cancelReplant() {
   $('cancel-prestige').disabled=true;
 }
 
-// These local titles reset the balance at prestige. A saved browser run can spend
-// only points earned since that reset; simulations using the engine may model other balances.
-function admitSavedRun(current, candidate) {
-  const run = admitRun(current, candidate);
-  if (run.banked > run.runProduced) throw new TypeError('saved balance exceeds production this run');
-  return run;
-}
-
 function readSaved(current) {
   if (runs.has(current.id)) return runs.get(current.id);
   const entry={state:newRun(current,Date.now()),expected:null,raw:null,blocked:false,conflicted:false,error:''};
   try {
     entry.raw=localStorage.getItem(storageKey(current.id));
     entry.expected=entry.raw;
-    if (entry.raw!==null) entry.state=admitSavedRun(current,JSON.parse(entry.raw));
+    if (entry.raw!==null) entry.state=admitRunWithEarnedBalance(current,JSON.parse(entry.raw));
   } catch {
     entry.blocked=true;
     entry.error='The saved run could not be read. It has not been replaced.';
@@ -381,7 +373,7 @@ $('retry-save').addEventListener('click',()=>{
     // Keep the first observed damaged text available even when the initial
     // read threw. Later failed retries must not replace that recovery copy.
     slot.raw ??= raw;
-    next=admitSavedRun(world,JSON.parse(raw));
+    next=admitRunWithEarnedBalance(world,JSON.parse(raw));
   } catch {status('The saved run still cannot be read. Nothing was replaced. Export the original text or import a valid backup.');return;}
   adoptSaved(next,raw);
   // Normal rendering settles capped offline time and attempts the existing
@@ -391,7 +383,7 @@ $('retry-save').addEventListener('click',()=>{
 $('import').addEventListener('click',()=>{
   cancelReset();cancelReplant();
   let parsed;
-  try {parsed=admitSavedRun(world,JSON.parse($('save-data').value));}
+  try {parsed=admitRunWithEarnedBalance(world,JSON.parse($('save-data').value));}
   catch {status('Import refused. No save was written and the current run is unchanged.');return;}
   const raw=JSON.stringify(parsed),result=writeSave(raw);
   if(!result.ok){failedWrite(result);status('Import could not be verified. No replacement was adopted; storage may have changed.');return;}

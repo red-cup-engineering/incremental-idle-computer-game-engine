@@ -1,7 +1,8 @@
+import dev0Save from './fixtures/earned-balance-dev0-save.json' with { type: 'json' };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLDS } from './fixtures/worlds.mjs';
-import { MAX_POINTS, STATE_KIND, WORLD_KIND, defineWorld, newRun, admitRun,
+import { MAX_POINTS, STATE_KIND, WORLD_KIND, defineWorld, newRun, admitRun, admitRunWithEarnedBalance,
   advance, tap, buyProducer, buyUpgrade, prestige, project, producerPrice } from '../src/engine.mjs';
 const [garden, observatory] = WORLDS;
 const T = 1_700_000_000_000;
@@ -117,4 +118,15 @@ test('every serialized game state is local nonfinancial data', () => {
     assert.equal(forbidden in state,false);
   }
   assert.equal(typeof JSON.parse(data).prestige,'number');
+});
+
+test('titles with earned balances restore a dev.0 post-prestige save and refuse excess stock', () => {
+  const state = admitRunWithEarnedBalance(garden, dev0Save);
+  assert.deepEqual(state, dev0Save);
+  assert.equal(state.prestige, 1);
+  assert.equal(state.banked, state.runProduced);
+  const excess = {...state, banked: state.runProduced + 1};
+  assert.ok(excess.banked < excess.allTime);
+  assert.deepEqual(admitRun(garden, excess), excess);
+  assert.throws(() => admitRunWithEarnedBalance(garden, excess), /exceeds production this run/);
 });
