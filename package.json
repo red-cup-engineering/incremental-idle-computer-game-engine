@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@red-cup-engineering/computer-data-engineering-services-section": "^0.7.4 || 0.8.1-dev.0",
-    "@red-cup-engineering/game-engine": "0.1.0-dev.0"
+    "@red-cup-engineering/game-engine": "0.1.0-dev.0",
+    "@red-cup-engineering/signcell": "^0.18.0 || 0.18.1-dev.0"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
