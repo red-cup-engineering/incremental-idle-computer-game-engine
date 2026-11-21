@@ -15,7 +15,7 @@ The original three named ESM entrances are `@red-cup-engineering/incremental-idl
 
 Existing `/src/*`, `/scripts/*`, `/design/*` and `/package.json` paths remain accessible for known consumers. These are compatibility paths, not a promise that every internal file is a stable API. There is no root entrance. The package carrier includes source, authored designs, generation/build tools and native tests. Generated browser output, dependency trees, workflow files, historical qualification records and local artifacts are not package inputs. README and LICENSE remain included by npm.
 
-Stoke and You Are Conscious use `/production-spectrum` to calculate production from their games’ graphs. It preserves the existing floating-point iteration and convergence history used in prestige and reflection.
+Stoke and You Are Conscious use `/production-spectrum` to estimate growth for prestige and reflection. Version `0.1.1-dev.2` adds `/production-graph` to convert their buildings and production links into a matrix and advance stocks while the player is away. Both games keep their public graph and clock imports. The titles define buildings, upgrades and rewards. These versions are private source packages.
 
 Use `validateRunWithEarnedBalance(world, save)` from `/engine` to reopen a save when a run starts at zero and spends only what it earns. Little Worlds and Mission: Mutualist use this check. Games with an opening balance can use `validateRun(world, save)`. Both read the existing save format. Earlier clients can continue using the exports introduced before version 0.1.1-dev.2.
 
@@ -136,8 +136,10 @@ upgrade/prestige rounding and income cap as the actual engine.
 
 - `requested` is an integer from 0 through 100 or `'max'` (at most 100 units).
   Batches remain partial: buy as many as the balance and level cap permit.
-  Zero, unknown, locked, capped and unaffordable requests retain the command's
-  existing refusal reasons and validation order.
+  A next unit priced above the maximum bank balance returns `price-cap` from
+  the forecast, quote and purchase command. A unit within the limit returns
+  `insufficient-points` when the current balance cannot cover it. Buying the
+  final affordable unit still succeeds, even when a larger batch was requested.
 - The quote never settles time. Call `advance`, `advanceActive` or `project`
   explicitly first if a current observation should affect the balance. This
   keeps wall clocks and active-time policy with the caller.

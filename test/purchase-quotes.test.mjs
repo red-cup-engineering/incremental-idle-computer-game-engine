@@ -127,3 +127,26 @@ test('explicit settlement composes at fractional, backward and capped observatio
     assert.equal(quote.count,action.count??0);assert.equal(quote.spent,action.spent??0);
   }
 });
+
+test('the last buyable unit succeeds and every later order reports the permanent price ceiling', () => {
+  for (const world of WORLDS) {
+    const p = world.producers[0];
+    let owned = 0;
+    while (engine.producerPrice(p, owned + 1) <= MAX_POINTS) owned++;
+    const state = funded(world);
+    state.producers[p.id] = owned;
+    const {actual} = compare(world, state, p.id, 'max');
+    assert.equal(actual.count, 1);
+    assert.equal(actual.spent, engine.producerPrice(p, owned));
+    const restored = admitRun(world, JSON.parse(JSON.stringify(actual.state)));
+    for (const count of [1, 10, 'max']) {
+      assert.equal(compare(world, restored, p.id, count).quote.reason, 'price-cap');
+      const later = buyProducer(world, restored, p.id, count, now + 1000);
+      assert.equal(later.reason, 'price-cap');
+      assert.deepEqual(later.state, advance(world, restored, now + 1000).state);
+    }
+    const readiness = engine.forecastProducerPurchase(world, restored, p.id, now, now);
+    assert.equal(readiness.reason, 'price-cap');
+    assert.equal(readiness.waitMs, null);
+  }
+});

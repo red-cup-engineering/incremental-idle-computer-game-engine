@@ -109,6 +109,12 @@ function waitLabel(milliseconds) {
   const hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
   return [hours?`${hours}h`:'',minutes?`${minutes}m`:'',rest?`${rest}s`:''].filter(Boolean).join(' ') || '0s';
 }
+const purchaseRefusals = {
+  'price-cap': 'price exceeds the balance limit',
+  'level-cap': 'level limit reached',
+  'insufficient-points': 'no affordable units yet',
+  locked: 'locked',
+};
 function purchaseReadiness(kind,item,now) {
   const state=player.position;
   const cost=kind==='producer'?item.nextCost:item.cost;
@@ -265,20 +271,26 @@ function render() {
   }
   $('offline-rule').textContent=`Offline collection: up to ${world.offlineCapSeconds/3600} hours per return. Progress stays on this device.`;
   for(const p of view.producers) {
-    const visible=p.owned>=MAX_LEVEL ? 'Level limit reached' : p.locked ? `Unlocks at ${format.format(p.unlockAt)} produced` : `${format.format(p.nextCost)} ${world.unit} next`;
+    // Batch purchases accept any positive number of units, so their
+    // availability also determines whether the single-unit button is enabled.
+    const batch = quoteProducerPurchase(world,state,p.id,10);
+    let visible = `${format.format(p.nextCost)} ${world.unit} next`;
+    if (batch.reason === 'price-cap') visible = 'Price exceeds the balance limit';
+    else if (batch.reason === 'level-cap') visible = 'Level limit reached';
+    else if (batch.reason === 'locked') visible = `Unlocks at ${format.format(p.unlockAt)} produced`;
     btns.producers.get(`${p.id}:owned`).textContent=`Owned ${p.owned}`;
     btns.producers.get(`${p.id}:cost`).textContent=visible;
     btns.readiness.get(p.id).textContent=p.owned>=MAX_LEVEL ? `Maximum owned (${MAX_LEVEL}).`
       : `${p.locked?'':'Next unit: '}${purchaseReadiness('producer',p,now)}`;
-    for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=p.locked || p.owned>=MAX_LEVEL || state.banked<p.nextCost;
+    for(const n of [1,10,'max']) btns.producers.get(`${p.id}:${n}`).disabled=!batch.accepted;
     for(const n of [10,'max']) {
       // project has already settled this observation. Quotes cannot advance
       // time or award actions; the actual click settles and plans afresh.
-      const quote=quoteProducerPurchase(world,state,p.id,n);
+      const quote=n===10 ? batch : quoteProducerPurchase(world,state,p.id,n);
       const label=n==='max'?'Buy max':'Buy 10';
       btns.previews.get(`${p.id}:${n}`).textContent=quote.accepted
         ? `${label}: ${quote.count} for ${exact.format(quote.spent)} ${world.unit}; +${exact.format(quote.rateGain)} / sec.`
-        : `${label}: ${p.locked?'locked':p.owned>=MAX_LEVEL?'level limit reached':'no affordable units yet'}.`;
+        : `${label}: ${purchaseRefusals[quote.reason]}.`;
     }
   }
   for(const u of view.upgrades) {
