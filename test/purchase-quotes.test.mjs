@@ -138,7 +138,7 @@ test('the last buyable unit succeeds and every later order reports the permanent
     const {actual} = compare(world, state, p.id, 'max');
     assert.equal(actual.count, 1);
     assert.equal(actual.spent, engine.producerPrice(p, owned));
-    const restored = admitRun(world, JSON.parse(JSON.stringify(actual.state)));
+    const restored = validateRun(world, JSON.parse(JSON.stringify(actual.state)));
     for (const count of [1, 10, 'max']) {
       assert.equal(compare(world, restored, p.id, count).quote.reason, 'price-cap');
       const later = buyProducer(world, restored, p.id, count, now + 1000);
