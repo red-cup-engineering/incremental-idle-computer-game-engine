@@ -1,9 +1,9 @@
 import test from'node:test';import assert from'node:assert/strict';
 import{spendPoints}from'../src/transactions.mjs';import{WORLDS}from'./fixtures/worlds.mjs';
-import{newRun,admitRun,advance,MAX_POINTS}from'../src/engine.mjs';
+import{newRun,validateRun,advance,MAX_POINTS}from'../src/engine.mjs';
 const world=WORLDS[0],funded=n=>({...newRun(world,1000),banked:n,runProduced:n,allTime:n});
 test('exact affordable debit changes only balance, preserving input and detachable inventory',()=>{
- const s=funded(25),before=structuredClone(s),r=spendPoints(world,s,5);assert.deepEqual(s,before);assert.deepEqual(r,{accepted:true,spent:5,state:{...s,banked:20}});assert.notEqual(r.state.producers,s.producers);assert.notEqual(r.state.upgrades,s.upgrades);assert.deepEqual(admitRun(world,JSON.parse(JSON.stringify(r.state))),r.state);
+ const s=funded(25),before=structuredClone(s),r=spendPoints(world,s,5);assert.deepEqual(s,before);assert.deepEqual(r,{accepted:true,spent:5,state:{...s,banked:20}});assert.notEqual(r.state.producers,s.producers);assert.notEqual(r.state.upgrades,s.upgrades);assert.deepEqual(validateRun(world,JSON.parse(JSON.stringify(r.state))),r.state);
 });
 test('zero no-op and insufficient rejection do not advance time, income or any state field',()=>{
  const s={...funded(5),producers:{...funded(5).producers,pencil:1}},before=structuredClone(s);

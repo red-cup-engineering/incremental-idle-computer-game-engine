@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { after, before, test } from 'node:test';
 import { JSDOM } from 'jsdom';
 import { WORLDS } from '@red-cup-engineering/incremental-idle-computer-game-engine/worlds';
-import { admitRun, newRun } from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
+import { validateRun, newRun } from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 import { build } from '../scripts/build.mjs';
 
 let output, html;
@@ -18,7 +18,7 @@ before(async () => {
 after(async () => { if (output) await rm(output, { recursive: true, force: true }); });
 
 for (const world of WORLDS) {
-  test(world.label + ' progresses, resumes and admits backups through its built page', async (t) => {
+  test(world.label + ' progresses, resumes and validates backups through its built page', async (t) => {
     const page = new JSDOM(html, { url: 'https://games.example/?world=' + world.id });
     t.after(() => page.window.close());
     const { document, localStorage, location, history } = page.window;
@@ -55,7 +55,7 @@ for (const world of WORLDS) {
     assert.equal(saved().banked, balance);
     control('export').click();
     const backup = control('save-data').value;
-    assert.deepEqual(admitRun(world, JSON.parse(backup)), saved());
+    assert.deepEqual(validateRun(world, JSON.parse(backup)), saved());
 
     control('prestige').click();
     control('confirm-prestige').click();

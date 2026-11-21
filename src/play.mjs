@@ -1,10 +1,10 @@
-// A session begins at an admitted idle checkpoint. Time is an explicit input,
+// A session begins at an validated idle checkpoint. Time is an explicit input,
 // including on purchase attempts that decline after crediting elapsed income.
-import { gameRules } from '@red-cup-engineering/game-engine/running/rules';
-import { admitRun, buyProducer, buyUpgrade, prestige, project, tap } from './engine.mjs';
+import { createGameRules } from '@red-cup-engineering/game-engine/running/rules';
+import { validateRun, buyProducer, buyUpgrade, prestige, project, tap } from './engine.mjs';
 
 export function idleRules(world) {
-  return gameRules(checkpoint => admitRun(world, checkpoint), (state, move) => {
+  return createGameRules(checkpoint => validateRun(world, checkpoint), (state, move) => {
     let outcome;
     switch (move.kind) {
       case 'observe': outcome = project(world, state, move.nowMs); break;

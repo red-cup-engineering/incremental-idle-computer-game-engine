@@ -7,8 +7,8 @@ import { createHash } from 'node:crypto';
 import { buildBrowserBundle } from '@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section/browser-bundle';
 import { generateWorlds } from './generate-worlds.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const supplier='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
-const saveSupplier='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
+const dependency='@red-cup-engineering/computer-data-engineering-services-section/simulation/discrete-clock';
+const saveDependency='@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 const src=path=>join(root,'src',path);
 
 export async function build(out = join(root,'dist')) {
@@ -16,18 +16,18 @@ export async function build(out = join(root,'dist')) {
   // Capture and check the authored design before producing any build output.
   const fabrication=await generateWorlds({check:true,root});
   const engine=await readFile(src('engine.mjs'),'utf8');
-  if (!engine.includes(`'${supplier}'`)) throw new Error('game engine must import canonical data clock');
+  if (!engine.includes(`'${dependency}'`)) throw new Error('game engine must import canonical data clock');
   const assets=await Promise.all(['worlds.mjs','style.css'].map(async name=>[name,await readFile(src(name))]));
   const browser=await readFile(src('browser.mjs'),'utf8');
-  if (!browser.includes(`'${saveSupplier}'`)) throw new Error('browser custody must use its declared save supplier');
-  const saveWriter=await readFile(fileURLToPath(import.meta.resolve(saveSupplier)));
-  const clock=await readFile(fileURLToPath(import.meta.resolve(supplier)));
+  if (!browser.includes(`'${saveDependency}'`)) throw new Error('the browser must import its declared save writer');
+  const saveWriter=await readFile(fileURLToPath(import.meta.resolve(saveDependency)));
+  const clock=await readFile(fileURLToPath(import.meta.resolve(dependency)));
   await mkdir(join(dest,'assets','generated'),{recursive:true});
-  await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${supplier}'`,`'./discrete-clock.mjs'`));
+  await writeFile(join(dest,'assets','engine.mjs'),engine.replace(`'${dependency}'`,`'./discrete-clock.mjs'`));
   for (const [name,bytes] of assets) await writeFile(join(dest,'assets',name),bytes);
   await buildBrowserBundle({
     absWorkingDir: root,
-    stdin: { contents: browser.replace(`'${saveSupplier}'`, "'./verified-save-write.mjs'"), resolveDir: src(''), sourcefile: 'browser.mjs' },
+    stdin: { contents: browser.replace(`'${saveDependency}'`, "'./verified-save-write.mjs'"), resolveDir: src(''), sourcefile: 'browser.mjs' },
     // These public modules are also stand-alone entries in the fabrication receipt.
     external: ['./engine.mjs', './worlds.mjs', './verified-save-write.mjs'],
     outfile: join(dest, 'assets/browser.mjs'), bundle: true, format: 'esm', platform: 'browser', target: 'es2022',
@@ -62,9 +62,10 @@ export async function build(out = join(root,'dist')) {
   const receipt={kind:'561.incremental-idle-fabrication-receipt/v1',
     design:fabrication.design,generated:fabrication.generated,
     producer:fabrication.producer,
-    supplier:{specifier:supplier,digest:digest(clock)},
-    browserSupplier:{specifier:saveSupplier,digest:digest(saveWriter)},artifacts:manifest,
-    receiving:'Deterministic design admission and static build; public deployment and player receiving are separate.'};
+    // Published v1 build records use these keys for the clock and save writer.
+    supplier:{specifier:dependency,digest:digest(clock)},
+    browserSupplier:{specifier:saveDependency,digest:digest(saveWriter)},artifacts:manifest,
+    receiving:'Generated the static game after validating the world definitions.'};
   await writeFile(join(dest,'fabrication-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
   return {dest,files:[...files,'fabrication-receipt.json'],receipt};
 }

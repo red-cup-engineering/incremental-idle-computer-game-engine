@@ -2,14 +2,20 @@ import dev0Save from './fixtures/earned-balance-dev0-save.json' with { type: 'js
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLDS } from './fixtures/worlds.mjs';
-import { MAX_POINTS, STATE_KIND, WORLD_KIND, defineWorld, newRun, admitRun, admitRunWithEarnedBalance,
+import { MAX_POINTS, STATE_KIND, WORLD_KIND, defineWorld, newRun, validateRun, validateRunWithEarnedBalance,
   advance, tap, buyProducer, buyUpgrade, prestige, project, producerPrice } from '../src/engine.mjs';
+import { admitRun, admitRunWithEarnedBalance } from '../src/engine.mjs';
 const [garden, observatory] = WORLDS;
 const T = 1_700_000_000_000;
 const seconds = (n) => T+n*1000;
 function withMarks(points,world=garden) {
   return {...newRun(world,T),banked:points,runProduced:points,allTime:points};
 }
+
+test('previous saved-run exports remain compatible', () => {
+  assert.equal(admitRun, validateRun);
+  assert.equal(admitRunWithEarnedBalance, validateRunWithEarnedBalance);
+});
 
 test('two different declarative worlds produce independent playable starts', () => {
   assert.notEqual(garden.id,observatory.id);
@@ -20,8 +26,8 @@ test('two different declarative worlds produce independent playable starts', () 
     const after=tap(world,start,T);
     assert.equal(after.state.banked,1);
     assert.equal(after.state.runProduced,1);
-    assert.deepEqual(admitRun(world,JSON.parse(JSON.stringify(after.state))),after.state);
-    assert.throws(()=>admitRun(world===garden?observatory:garden,after.state),/another world/);
+    assert.deepEqual(validateRun(world,JSON.parse(JSON.stringify(after.state))),after.state);
+    assert.throws(()=>validateRun(world===garden?observatory:garden,after.state),/another world/);
   }
 });
 test('players can tap, buy multiple producers and earn offline income without a running timer', () => {
@@ -67,9 +73,9 @@ test('backward clocks and invalid inputs never mint points', () => {
   const s=withMarks(100);
   assert.equal(advance(garden,s,T-1000).state.lastMs,T);
   assert.throws(()=>advance(garden,s,Infinity),/toMs/);
-  assert.throws(()=>admitRun(garden,{...s,banked:-1}),RangeError);
-  assert.throws(()=>admitRun(garden,{...s,producers:{pencil:0}}),/inventory/);
-  assert.throws(()=>admitRun(garden,{...s,runProduced:1000}),/inconsistent/);
+  assert.throws(()=>validateRun(garden,{...s,banked:-1}),RangeError);
+  assert.throws(()=>validateRun(garden,{...s,producers:{pencil:0}}),/inventory/);
+  assert.throws(()=>validateRun(garden,{...s,runProduced:1000}),/inconsistent/);
   assert.throws(()=>defineWorld({...garden,producers:[{...garden.producers[0],ratePerSecond:-10}]}),RangeError);
 });
 test('refused purchases preserve progress and never grant a producer or upgrade', () => {
@@ -121,12 +127,12 @@ test('every serialized game state is local nonfinancial data', () => {
 });
 
 test('titles with earned balances restore a dev.0 post-prestige save and refuse excess stock', () => {
-  const state = admitRunWithEarnedBalance(garden, dev0Save);
+  const state = validateRunWithEarnedBalance(garden, dev0Save);
   assert.deepEqual(state, dev0Save);
   assert.equal(state.prestige, 1);
   assert.equal(state.banked, state.runProduced);
   const excess = {...state, banked: state.runProduced + 1};
   assert.ok(excess.banked < excess.allTime);
-  assert.deepEqual(admitRun(garden, excess), excess);
-  assert.throws(() => admitRunWithEarnedBalance(garden, excess), /exceeds production this run/);
+  assert.deepEqual(validateRun(garden, excess), excess);
+  assert.throws(() => validateRunWithEarnedBalance(garden, excess), /exceeds production this run/);
 });

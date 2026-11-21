@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as engine from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 import { WORLDS } from './fixtures/worlds.mjs';
 
-const {MAX_POINTS,MAX_LEVEL,newRun,defineWorld,buyProducer,incomePerSecond,advance,admitRun,quoteProducerPurchase}=engine;
+const {MAX_POINTS,MAX_LEVEL,newRun,defineWorld,buyProducer,incomePerSecond,advance,validateRun,quoteProducerPurchase}=engine;
 const now=1_793_797_200_000;
 const funded=(world,banked=MAX_POINTS)=>({...newRun(world,now),banked,runProduced:MAX_POINTS,allTime:MAX_POINTS});
 const freeze=state=>{for(const value of Object.values(state))if(value&&typeof value==='object')Object.freeze(value);return Object.freeze(state);};
@@ -14,7 +14,7 @@ function compare(world,state,id,requested) {
   assert.equal(quote.count,actual.count??0);assert.equal(quote.spent,actual.spent??0);
   assert.equal(quote.rateGain,incomePerSecond(world,actual.state)-incomePerSecond(world,state));
   assert.equal(Object.hasOwn(quote,'state'),false);assert.equal(JSON.stringify(state),before);
-  assert.deepEqual(admitRun(world,actual.state),actual.state);
+  assert.deepEqual(validateRun(world,actual.state),actual.state);
   return {quote,actual};
 }
 // Independent integer decomposition, not the engine's BigInt recurrence.
@@ -96,7 +96,7 @@ test('quotes neither settle time nor grant objectives; commands do each at the a
   const ready=quoteProducerPurchase(world,settled,'pencil',10),actual=buyProducer(world,state,'pencil',10,later);
   assert.equal(ready.count,actual.count);assert.equal(ready.spent,actual.spent);
   assert.equal(actual.state.objectiveProgress.equip,3);assert.equal(actual.state.lastMs,later);
-  assert.deepEqual(admitRun(world,JSON.parse(JSON.stringify(actual.state))),actual.state);
+  assert.deepEqual(validateRun(world,JSON.parse(JSON.stringify(actual.state))),actual.state);
 });
 test('rate gain uses the existing upgrade/prestige rounding and income saturation',()=>{
   for(const world of WORLDS)for(const prestige of [0,1,13,1000])for(const enabled of [false,true]) {

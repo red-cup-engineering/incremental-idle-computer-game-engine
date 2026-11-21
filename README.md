@@ -7,7 +7,7 @@
 [![Tips welcome](https://img.shields.io/badge/tips-welcome-d4a017)](https://github.com/561-group/.github/blob/main/TIPS.md)
 <!-- 561-group-standards:badges:end -->
 
-Red Cup Engineering's reusable **typed, declarative incremental-game engine** and a genuinely playable, zero-custody browser consumer. It builds two independent, original local-only worlds: **Trace Garden** and **Pocket Observatory**. Neither is a mining service, advertisement, money-like reward, blockchain game or public account system.
+Red Cup Engineering's reusable **typed, declarative incremental-game engine** and its local browser game. It builds two independent, original local-only worlds: **Trace Garden** and **Pocket Observatory**. Neither is a mining service, advertisement, money-like reward, blockchain game or public account system.
 
 ## Proposed package consumer contract
 
@@ -15,22 +15,15 @@ The original three named ESM entrances are `@red-cup-engineering/incremental-idl
 
 Existing `/src/*`, `/scripts/*`, `/design/*` and `/package.json` paths remain accessible for known consumers. These are compatibility paths, not a promise that every internal file is a stable API. There is no root entrance. The package carrier includes source, authored designs, generation/build tools and native tests. Generated browser output, dependency trees, workflow files, historical qualification records and local artifacts are not package inputs. README and LICENSE remain included by npm.
 
-The private 0.1.1-dev.0 checkout adds `/production-spectrum` for Stoke and You Are Conscious. It preserves their historical binary64 power iteration, convergence trace and production-graph refusal messages. These readings drive prestige and reflection in existing games. The new entrance has no runtime imports. A title must receive an owner-issued exact artifact and its normal frozen dependency closure before treating it as the released dependency required by Mutualist Mission. The original Engineering publication owner retains version, channel, integrity and release gates.
+Stoke and You Are Conscious use `/production-spectrum` to calculate production from their games’ graphs. It preserves the existing floating-point iteration and convergence history used in prestige and reflection.
 
-Version `0.1.1-dev.1` adds `admitRunWithEarnedBalance(world, save)` to `/engine`. Use it when a new run starts with zero stock and can only spend points earned since its last reset. Little Worlds and Mission: Mutualist use this check when reopening saves. Simulations that grant opening balances can continue using `admitRun(world, save)`. Both readers retain the existing save formats.
+Use `validateRunWithEarnedBalance(world, save)` from `/engine` to reopen a save when a run starts at zero and spends only what it earns. Little Worlds and Mission: Mutualist use this check. Games with an opening balance can use `validateRun(world, save)`. Both read the existing save format. Earlier clients can continue using the exports introduced before version 0.1.1-dev.2.
 
-The `/engine`, `/worlds`, and `/transactions` runtime entrances require the declared Computer Data supplier and do not require JSNode. Generation and static build are separate tooling entrances: a consumer selecting them must provide a JSNode version matching `peerDependencies`. This peer is optional for core-only consumers and retained in `devDependencies` for this package's own development. Selecting a tooling entrance without that supplier fails; optional does not mean generation works without it. A title using the generator should declare the same exact JSNode development dependency and receive its actual installed producer identity. The static build remains the two-world Little Worlds app, not a Mutualist title or a browser adapter for resource transactions.
+The engine uses Computer Data’s clock implementation. The world generator and browser build also use the JSNode development dependency.
 
 The installed static build also uses the browser asset publisher declared as an optional peer. Install that publisher alongside JSNode and Game Systems to build the two playable titles from the package.
 
-The Little Worlds browser and its static build also select gamehouse's existing
-`/verified-save-write` entry. This is a separate optional peer for those entries,
-not an engine, worlds or transactions dependency. The source checkout pins the
-six-file, zero-dependency supplier as an exact development artifact. The build
-copies only its resolved save helper into the browser graph and records its hash.
-It does not load a house aggregator or any other game engine. Core-only consumers
-need neither browser supplier. See [browser recovery](design/browser-recovery.md)
-for its exact provenance, player contract and non-atomic limits.
+The browser and static build use Game Systems’ `/verified-save-write` to persist player progress. The build copies the installed save writer into the browser assets and records its digest. See [browser recovery](design/browser-recovery.md) for the saved-game behavior.
 
 ## Review before replanting
 
@@ -44,11 +37,11 @@ refresh its current award. See [replant planning](design/prestige-planning.md).
 ## Bounded active-time settlement
 
 Automatic production floors the exact aggregate producer income and percentage
-bonus before applying the point cap. Even admitted safe-integer rates can have
+bonus before applying the point cap. Even valid safe-integer rates can have
 unsafe intermediate products; these cannot add or lose a point or reach the cap
 early. Existing saves retain their recorded balances and inventory. Future
 production, readiness and purchase previews use the corrected shared rule. See
-[exact production](design/exact-production.md) for the arithmetic and receiving
+[exact production](design/exact-production.md) for the arithmetic and verification
 contract. The two shipped world designs and save formats are unchanged.
 
 Producer prices use exact per-level integer ceiling, including late-game quotes
@@ -61,7 +54,7 @@ custom-objective compatibility, regression cases and consumer qualification.
 unobserved time, discards excess history and tolerates backward observations
 without minting points. Its save contract and behavior are unchanged.
 
-`advanceActive(world, run, fromMs, toMs)`, from the same `/engine` entrance, settles
+`advanceActive(world, run, fromMs, toMs)`, from the same `/engine` export, settles
 an explicitly selected active logical interval. This is useful when a title pauses
 production between rounds but retains the fractional tick already observed before
 the pause. For example, 500 ms retained plus 60,000 ms of new active time produces
@@ -96,7 +89,7 @@ manual `advance` calls without moving season rules into the engine.
 ## Bounded production readiness
 
 `forecastProduction(world, run, target, fromMs, toMs)` is a pure bank-target quote
-from `/engine`. It uses the same admitted run and selected active interval as
+from `/engine`. It uses the same validated run and selected active interval as
 `advanceActive`, including retained fractional tick phase and the world time cap.
 It does not advance the run, spend points, record an action or choose a deadline.
 
@@ -136,7 +129,7 @@ purchase. Both Little Worlds consume them for locked-item planning. See
 
 `quoteProducerPurchase(world, run, producerId, requested)` from `/engine` returns
 `{accepted, count, spent, rateGain}` for a possible purchase against the supplied
-admitted balance. Refusals add `reason` and return zero for all three metrics.
+validated balance. Refusals add `reason` and return zero for all three metrics.
 The result contains no speculative state, clock timestamp, objective progress,
 reservation or reusable purchase authority. `rateGain` uses the same current
 upgrade/prestige rounding and income cap as the actual engine.
@@ -161,7 +154,7 @@ or objective transitions. Clicks still use the original command, and all saved
 run kinds, progression rules, point arithmetic and package dependencies remain
 unchanged. This additive API does not publish a package or update an external
 title's pinned artifact. See `design/purchase-quotes.md` for the boundary and
-native/consumer receiving obligations.
+engine and consumer test requirements.
 
 ## Exact upgrade alternatives
 
@@ -193,66 +186,32 @@ shared award calculation uses bounded exact integer thresholds; save formats,
 world balance and external titles' pinned artifacts remain unchanged. See
 [replant planning](design/prestige-planning.md) for the public result contract.
 
-## Engine-only qualification
+## Engine tests
 
-The extraction obligation in `TODO.md` remains open. The engine's existing
-transition, arithmetic, purchase, objective and admission assertions now consume
-explicit regression inputs in `test/fixtures/`, rather than importing the Little
-Worlds catalog. These inputs preserve the historical numerical witnesses from
-commit `7cff7c23515a6cd4948603cb22fd89c829519ab2`; they are not a second authored
-game catalog or generated runtime source. Title generation, browser and built
-consumer assertions remain in the original full suite.
-
-```sh
-npm run test:engine
-npm run test:engine-consumer
-```
-
-The first command executes the original engine assertions. The second reruns
-those exact files from an isolated tree containing only `src/engine.mjs`,
-`src/transactions.mjs`, their tests, and the real already-installed Computer Data
-supplier. No title catalog, generated worlds, generator, browser, style, build
-script, JSNode or gamehouse supplier is available there. A negative control
-restores a title-world import and verifies that the isolated proof fails.
-
-The consumer command also packs this package with lifecycle scripts disabled and
-network access disabled, extracts that actual archive, and exercises its public
-engine and transaction entrances with caller-authored rules. It checks purchase,
-production readiness, active settlement, spending, save admission and prestige
-without installing the optional title suppliers. The copied Computer Data package
-is version-checked against the runtime manifest. This is selected-entrance source
-and packed-artifact qualification, not a fresh dependency installation, package
-publication, browser playthrough or completed source extraction.
-
-The main `npm test`, generated-source check and browser build still run all their
-original checks. The exact intended upstream remains
-`@red-cup-engineering/game-engine`. This change neither fabricates that package nor
-substitutes another owner for it, and adds no dependency. The existing title-owned
-source, tooling and historical file-based development supplier still need their
-real receiving owner before removal from this repository.
+Run `node --run test:engine` to check progression, elapsed time, purchases, save validation, objectives and prestige. The tests use the regression worlds in `test/fixtures/`. Run `node --run test` to exercise the game rules, saved browser games and generated pages as well.
 
 ## Native developer use
 
-Node >=24, with the declared Computer Data and pinned JSNode fabrication supplier installed:
+Node >=24, with the declared Computer Data and pinned JSNode fabrication dependency installed:
 
 ```sh
-npm run check:generated
-npm test
-npm run build
+node --run check:generated
+node --run test
+node --run build
 python3 -m http.server --directory dist 8080
 ```
 
-Tests use the Node test runner for game transitions, admission failures and
+Tests use the Node test runner for game transitions, validation failures and
 mathematical properties. Generator tests compare emitted data with the current
 authored catalog and vary production rules through real gameplay, rather than
 keeping a second frozen catalog. Build tests import the emitted modules and run
 browser controls through the shared browser harness. Package tests exercise
 standalone save-write failures and core imports without optional tooling.
 Receipt hashes verify the current input and output bytes; no test freezes a
-supplier's implementation hash. Browser harness checks do not replace visual
+dependency's implementation hash. Browser harness checks do not replace visual
 or real-browser testing.
 
-Open `http://127.0.0.1:8080/` and click, purchase a producer, let it grow, buy upgrades, reload, try the other world, and eventually Replant for permanent sparks. Every input action has a deterministic pure transition. `/assets/discrete-clock.mjs` is a **copied build artifact from the installed Computer Data supplier**, not another leaf implementation. The publisher reads the canonical package's exact resolved file and rewrites the engine's module specifier for static ESM browser loading; it does not ship a private package registry or start a second hosting system.
+Open `http://127.0.0.1:8080/` and click, purchase a producer, let it grow, buy upgrades, reload, try the other world, and eventually Replant for permanent sparks. Every input action has a deterministic pure transition. `/assets/discrete-clock.mjs` is a **copied build artifact from the installed Computer Data dependency**, not another leaf implementation. The publisher reads the canonical package's exact resolved file and rewrites the engine's module specifier for static ESM browser loading; it does not ship a private package registry or start a second hosting system.
 
 The `./play` export adapts these progression functions to Game Engine’s shared rules. Both browser worlds pass each action and clock observation to its streaming player with an explicit `nowMs`. A purchase attempt can credit elapsed production and then refuse the purchase. Its transition preserves the credited balance and reports `action-refused`. The existing local save remains a per-world checkpoint. Consumers can supply that checkpoint to the same rules and replay a subsequent move record.
 
@@ -262,14 +221,14 @@ Edit `design/world-catalog.json`, whose structural contract is
 `design/world-catalog.schema.json`, then run `npm run generate`. The shared
 JSNode module producer validates the declared data and fabricates the immutable
 ESM catalog in `src/generated/world-definitions.mjs`; the game retains semantic
-admission in `defineWorld`. No source editing is needed to add another world
+validation in `defineWorld`. No source editing is needed to add another world
 within that contract. The original two worlds retain their game rules and saves.
 
-`npm run check:generated` compares without writing. The build performs that same
+`node --run check:generated` compares without writing. The build performs that same
 check before creating output, so a changed design or hand-edited generated file
 cannot silently reach the browser. `dist/fabrication-receipt.json` binds the
-schema, catalog, generated source, clock supplier and static artifact bytes by
-SHA-256. Read `design/README.md` for the requirement-to-receiving trace and save
+schema, catalog, generated source, clock dependency and static artifact bytes by
+SHA-256. Read `design/README.md` for the requirements and verification steps and save
 compatibility boundary. These are deterministic data projections; algorithm
 synthesis, isolated inference assays and production activation retain their
 separate contracts.
@@ -299,7 +258,7 @@ purchase transition. See [batch previews](design/batch-previews.md).
 - Observed time is injected into pure source transitions; complete seconds accrue while the tab is closed, capped at each world's clearly disclosed offline maximum. A clock moving backwards cannot create output.
 - Replanting spends accumulated run progress to award permanent sparks; production and manual actions improve afterward while per-run producers/upgrades reset.
 - Invalid/incompatible saved state fails closed. A broken save is **not silently overwritten**; the player can export the raw bytes and explicitly clear it, or import an earlier saved JSON. No local browser save is authoritative value.
-- Admitted live runs remain in this page while switching worlds, including when
+- Validated live runs remain in this page while switching worlds, including when
   storage fails. Export uses that live run, not an older stored copy. Persistent
   warnings identify worlds needing export before closing; these drafts are not
   durable backups. Import/reset adopt replacement state only after an exact save
@@ -309,9 +268,9 @@ purchase transition. See [batch previews](design/batch-previews.md).
 
 **Owners and boundaries.** Computer Data owns the generic safe-integer and discrete time quantization source. This package owns only game-specific state, progression and consumer UI. Metrologic/SignCell/SignChain/SignGraph/SignCraft are neither clocks nor pretend financial ledgers. `games-host` is the existing native HTTP game supervisor if a competent host operator later selects this static site; this package does not duplicate it.
 
-**Receiving boundary.** `npm test` and `npm run build` exercise the source and static browser artifact. They do not prove the package version is published, a Cloudflare/Cold Red Gate host has selected these assets, or that a public user has played. No production route is declared here.
+**Release verification.** `node --run test` and `node --run build` exercise the source and static browser artifact. They do not prove the package version is published, a Cloudflare/Cold Red Gate host has selected these assets, or that a public user has played. No production route is declared here.
 
-Runtime world admission requires string identities and dense record arrays in both direct engine and authored-design use. See [world admission](design/world-admission.md) for the boundary, intentional refusal of malformed custom definitions, and source/built consumer checks.
+Runtime world validation requires string identities and dense record arrays in both direct engine and authored-design use. See [world validation](design/world-admission.md) for the boundary, intentional refusal of malformed custom definitions, and source/built consumer checks.
 
 
 ### Cancel a pending world reset

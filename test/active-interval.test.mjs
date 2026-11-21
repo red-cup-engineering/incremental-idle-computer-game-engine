@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORLDS} from './fixtures/worlds.mjs';
-import {MAX_POINTS,defineWorld,newRun,admitRun,advance,advanceActive,tap,buyProducer,
+import {MAX_POINTS,defineWorld,newRun,validateRun,advance,advanceActive,tap,buyProducer,
   buyUpgrade,prestige} from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 
 const world=defineWorld({...WORLDS[0],id:'active-interval-fixture',offlineCapSeconds:60});
@@ -72,10 +72,10 @@ test('active production retains objective and bounded point accounting',()=>{
   assert.equal(result.gained,300);assert.equal(result.state.banked,MAX_POINTS);
   assert.equal(result.state.runProduced,MAX_POINTS);assert.equal(result.state.allTime,MAX_POINTS);
   assert.equal(result.state.runTaps,0);assert.deepEqual(result.state.objectiveProgress,{practice:0});
-  assert.deepEqual(admitRun(objective,JSON.parse(JSON.stringify(result.state))),result.state);
+  assert.deepEqual(validateRun(objective,JSON.parse(JSON.stringify(result.state))),result.state);
 });
 
-test('active intervals support zero production and the maximal admitted rate',()=>{
+test('active intervals support zero production and the maximum supported rate',()=>{
   assert.equal(advanceActive(world,newRun(world,0),999,60999).gained,0);
   const fast=defineWorld({...world,producers:[{...world.producers[0],ratePerSecond:MAX_POINTS}]});
   const result=advanceActive(fast,run(fast,0),999,60999);
@@ -120,7 +120,7 @@ test('safe integer time boundaries do not overflow while validating retained pha
   assert.throws(()=>advanceActive(world,input,start+999,max+1),/toMs/);
 });
 
-test('all defined world caps admit exactly their boundary and refuse one extra millisecond',()=>{
+test('all defined world caps allow exactly their boundary and refuse one extra millisecond',()=>{
   for(const seconds of [1,60,21600,86400]){
     const w=defineWorld({...world,offlineCapSeconds:seconds}),input=run(w,0);
     assert.equal(advanceActive(w,input,999,seconds*1000+999).seconds,seconds);

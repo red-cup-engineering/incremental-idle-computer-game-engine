@@ -1,7 +1,7 @@
 import { createRulePlayer } from '@red-cup-engineering/game-engine/running/rules';
 import { idleRules } from './play.mjs';
 import { WORLDS, worldById } from './worlds.mjs';
-import { newRun, admitRunWithEarnedBalance, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
+import { newRun, validateRunWithEarnedBalance, quotePrestige, quoteProducerPurchase, quoteUpgradePurchase, forecastProducerPurchase, forecastUpgradePurchase, MAX_LEVEL, MAX_POINTS } from './engine.mjs';
 import { writeVerifiedSave } from '@red-cup-engineering/computer-game-systems-engineering-services-section/verified-save-write';
 
 const $ = id => document.getElementById(id);
@@ -45,7 +45,7 @@ function readSaved(current) {
   try {
     entry.raw=localStorage.getItem(storageKey(current.id));
     entry.expected=entry.raw;
-    if (entry.raw!==null) entry.state=admitRunWithEarnedBalance(current,JSON.parse(entry.raw));
+    if (entry.raw!==null) entry.state=validateRunWithEarnedBalance(current,JSON.parse(entry.raw));
   } catch {
     entry.blocked=true;
     entry.error='The saved run could not be read. It has not been replaced.';
@@ -135,7 +135,7 @@ function readinessNode(id,content) {
 }
 function renderPrestige() {
   const state=player.position;
-  // Quote the current admitted run. Normal rendering settles time; opening
+  // Quote the current validated run. Normal rendering settles time; opening
   // review does not. Confirmation uses the native command and its current clock.
   const quote=quotePrestige(world,state),button=$('prestige');
   button.disabled=!quote.accepted;
@@ -353,7 +353,7 @@ function resetKeydown(event) {
 for(const id of ['reset','confirm-reset','cancel-reset']) $(id).addEventListener('keydown',resetKeydown);
 $('export').addEventListener('click',()=>{
   try {
-    // Never export stale persisted bytes in place of an admitted live run.
+    // Never export stale persisted bytes in place of an validated live run.
     // A blocked placeholder is not progress and must never be exported as such.
     const raw=blocked ? slot.raw ?? localStorage.getItem(storageKey(world.id)) : JSON.stringify(player.position);
     if(raw===null) throw new Error('No original save text is available');
@@ -373,21 +373,21 @@ $('retry-save').addEventListener('click',()=>{
     // Keep the first observed damaged text available even when the initial
     // read threw. Later failed retries must not replace that recovery copy.
     slot.raw ??= raw;
-    next=admitRunWithEarnedBalance(world,JSON.parse(raw));
+    next=validateRunWithEarnedBalance(world,JSON.parse(raw));
   } catch {status('The saved run still cannot be read. Nothing was replaced. Export the original text or import a valid backup.');return;}
   adoptSaved(next,raw);
   // Normal rendering settles capped offline time and attempts the existing
-  // guarded save. A later read/write conflict retains this admitted live run.
+  // guarded save. A later read/write conflict retains this validated live run.
   render();status('Saved run recovered for this world. Check save warnings before closing.');$('tap').focus();
 });
 $('import').addEventListener('click',()=>{
   cancelReset();cancelReplant();
   let parsed;
-  try {parsed=admitRunWithEarnedBalance(world,JSON.parse($('save-data').value));}
+  try {parsed=validateRunWithEarnedBalance(world,JSON.parse($('save-data').value));}
   catch {status('Import refused. No save was written and the current run is unchanged.');return;}
   const raw=JSON.stringify(parsed),result=writeSave(raw);
   if(!result.ok){failedWrite(result);status('Import could not be verified. No replacement was adopted; storage may have changed.');return;}
-  // The candidate is already admitted; do not reload storage and replace it
+  // The candidate is already validated; do not reload storage and replace it
   // with a blocked placeholder if a later read fails.
   adoptSaved(parsed,raw);render();status('Save imported for this world.');
 });

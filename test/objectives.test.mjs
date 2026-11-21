@@ -25,7 +25,7 @@ test('bulk producer progress counts actual units and saturates without mutating 
   assert.equal(result.count,10);
   assert.equal(result.state.objectiveProgress['build-tools'],2);
   assert.deepEqual(input,copy);
-  assert.equal(e.admitRun(world,result.state).objectiveProgress['build-tools'],2);
+  assert.equal(e.validateRun(world,result.state).objectiveProgress['build-tools'],2);
   const poor={...funded(),banked:10};
   const partial=e.buyProducer(world,poor,'pencil',10,T);
   assert.equal(partial.count,1);assert.equal(partial.state.objectiveProgress['build-tools'],1);
@@ -71,7 +71,7 @@ test('objectives do not replace production threshold or lift prestige cap',()=>{
 });
 test('objective saves round-trip deeply isolated and fail closed on incompatible imports',()=>{
   const s=complete(),raw=JSON.stringify(s);
-  const imported=e.admitRun(world,JSON.parse(raw));
+  const imported=e.validateRun(world,JSON.parse(raw));
   assert.equal(JSON.stringify(imported),raw);
   imported.objectiveProgress['manual-practice']=0;
   assert.equal(s.objectiveProgress['manual-practice'],2);
@@ -90,16 +90,16 @@ test('objective saves round-trip deeply isolated and fail closed on incompatible
     s=>s.objectiveContract='changed',
     s=>s.kind=e.STATE_KIND,
     s=>s.worldId=base.id,
-  ]) {const bad=JSON.parse(raw);mutation(bad);assert.throws(()=>e.admitRun(world,bad));}
-  assert.throws(()=>e.admitRun(world,{...e.newRun(base,T),worldId:world.id}));
+  ]) {const bad=JSON.parse(raw);mutation(bad);assert.throws(()=>e.validateRun(world,bad));}
+  assert.throws(()=>e.validateRun(world,{...e.newRun(base,T),worldId:world.id}));
   const changed=e.defineWorld({...world,prestigeObjectives:rules.map(o=>o.action==='tap'?{...o,count:3}:o)});
-  assert.throws(()=>e.admitRun(changed,s),/contract/);
+  assert.throws(()=>e.validateRun(changed,s),/contract/);
   const reordered=e.defineWorld({...world,prestigeObjectives:rules.toReversed()});
-  assert.deepEqual(e.admitRun(reordered,s),s);
+  assert.deepEqual(e.validateRun(reordered,s),s);
   const renamed=e.defineWorld({...world,prestigeObjectives:rules.map(o=>({...o,label:'New descriptive wording'}))});
-  assert.deepEqual(e.admitRun(renamed,s),s);
+  assert.deepEqual(e.validateRun(renamed,s),s);
 });
-test('bounded data admission refuses invalid, unknown and executable objective rules',()=>{
+test('world validation rejects invalid, unknown and executable objective rules',()=>{
   for(const objectives of [
     [],Array.from({length:17},(_,i)=>({...rules[0],id:'objective-'+i})),
     [rules[0],rules[0]],
@@ -121,14 +121,14 @@ test('legacy worlds, new-run bytes and prestige remain unchanged',()=>{
     const s=e.newRun(w,T);
     assert.equal(s.kind,e.STATE_KIND);
     assert.equal(Object.hasOwn(s,'objectiveProgress'),false);
-    assert.equal(JSON.stringify(e.admitRun(w,JSON.parse(JSON.stringify(s)))),JSON.stringify(s));
+    assert.equal(JSON.stringify(e.validateRun(w,JSON.parse(JSON.stringify(s)))),JSON.stringify(s));
     const rich={...s,banked:w.prestigeThreshold*4,runProduced:w.prestigeThreshold*4,allTime:w.prestigeThreshold*4};
     assert.equal(e.prestige(w,rich,T).awarded,2);
     assert.equal(Object.hasOwn(e.project(w,s,T),'objectives'),false);
   }
 });
 
-test('producer objective admission respects the actual finite price ceiling',()=>{
+test('producer objective validation respects the actual finite price ceiling',()=>{
   const p=base.producers[0];
   let reachable=0;
   while(reachable<e.MAX_LEVEL && e.producerPrice(p,reachable)<=e.MAX_POINTS) reachable++;

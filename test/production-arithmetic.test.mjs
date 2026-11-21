@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLDS } from './fixtures/worlds.mjs';
-import { MAX_POINTS, MAX_LEVEL, defineWorld, newRun, admitRun, incomePerSecond,
+import { MAX_POINTS, MAX_LEVEL, defineWorld, newRun, validateRun, incomePerSecond,
   advance, advanceActive, forecastProduction, project, quoteProducerPurchase,
   buyProducer, quoteUpgradePurchase, buyUpgrade, prestige } from '../src/engine.mjs';
 
@@ -31,7 +31,7 @@ function boostedRun(world, options = {}) {
   return {...newRun(world, 137), producers: {[world.producers[0].id]: 1}, upgrades: {boost: true}, ...options};
 }
 
-test('admitted high-rate worlds floor exact percentage production, not a rounded intermediate', () => {
+test('high-rate worlds floor exact percentage production, not a rounded intermediate', () => {
   for (const [rate, bonus, expected] of [
     [100000000000099, 1, 101000000000099],
     [100000000000100, 261, 361000000000361],
@@ -40,7 +40,7 @@ test('admitted high-rate worlds floor exact percentage production, not a rounded
     const world = highWorld(rate, bonus), state = boostedRun(world);
     assert.equal(incomePerSecond(world, state), expected);
     assert.equal(expectedIncome(world, state), expected);
-    assert.deepEqual(admitRun(world, JSON.parse(JSON.stringify(state))), state);
+    assert.deepEqual(validateRun(world, JSON.parse(JSON.stringify(state))), state);
   }
 });
 
@@ -74,7 +74,7 @@ test('all prestige multipliers and combined bonuses floor the aggregate once', (
   assert.equal(incomePerSecond(world, state), 3, 'floor after summing producer income');
 });
 
-test('zero inventory, near-cap results and the largest admitted aggregate remain bounded Numbers', () => {
+test('zero inventory, near-cap results and the largest supported aggregate remain bounded Numbers', () => {
   for (const rate of [MAX_POINTS - 1, MAX_POINTS]) {
     const world = highWorld(rate), state = boostedRun(world, {upgrades: {boost: false}});
     assert.equal(incomePerSecond(world, state), rate);
@@ -108,7 +108,7 @@ test('native settlement and readiness never credit or promise the rounded extra 
   assert.equal(advanceActive(world, state, 637, forecast.readyAtMs - 1).state.banked, expected);
   assert.equal(advanceActive(world, state, 637, forecast.readyAtMs).state.banked, 2 * expected);
   assert.equal(advance(world, state, 10137).state.banked, MAX_POINTS);
-  assert.deepEqual(admitRun(world, JSON.parse(JSON.stringify(at.state))), at.state);
+  assert.deepEqual(validateRun(world, JSON.parse(JSON.stringify(at.state))), at.state);
   assert.deepEqual(state, original, 'quotes and settlement do not rewrite the existing run');
 });
 
@@ -141,7 +141,7 @@ test('shipped worlds and old save inventories retain their production at all sam
       const factor = 100 + 20 * prestige + world.upgrades.reduce((sum, u) => sum + (enabled && u.effect === 'production' ? u.amount : 0), 0);
       assert.equal(incomePerSecond(world, state), Math.min(MAX_POINTS, Math.floor(base * factor / 100)));
       assert.equal(incomePerSecond(world, state), expectedIncome(world, state));
-      assert.deepEqual(admitRun(world, JSON.parse(JSON.stringify(state))), state);
+      assert.deepEqual(validateRun(world, JSON.parse(JSON.stringify(state))), state);
     }
   }
 });

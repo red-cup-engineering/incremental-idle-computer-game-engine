@@ -34,7 +34,7 @@ export async function projectWorlds({root = repositoryRoot} = {}) {
   ]);
   const catalog = JSON.parse(decode(catalogBytes));
   const schema = JSON.parse(decode(schemaBytes));
-  // The shared producer admits the structural schema before any game-specific reads.
+  // JSNode validates the data against its schema before any game-specific reads.
   const files = projectJsnodeModules({
     operations: [],
     dataModules: [{path: GENERATED_PATH, exports: [{name: 'WORLD_DEFINITIONS', value: catalog, schema}]}],
@@ -56,7 +56,7 @@ export async function projectWorlds({root = repositoryRoot} = {}) {
   };
 }
 
-/** Check or materialize the single generated catalog after complete design admission. */
+/** Check or materialize the single generated catalog after validating all world definitions. */
 export async function generateWorlds({check = false, root = repositoryRoot} = {}) {
   const projected = await projectWorlds({root});
   const file = projected.files[0];
@@ -66,7 +66,7 @@ export async function generateWorlds({check = false, root = repositoryRoot} = {}
   try { current = await readFile(destination); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const changed = current === undefined || !current.equals(Buffer.from(file.text, 'utf8'));
-  if (check && changed) throw new Error(`stale generated world source: ${GENERATED_PATH}; run npm run generate`);
+  if (check && changed) throw new Error(`stale generated world source: ${GENERATED_PATH}; run node --run generate`);
   if (!check && changed) {
     await mkdir(dirname(destination), {recursive: true});
     const temporary = destination + '.' + randomUUID() + '.tmp';
@@ -85,7 +85,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exitCode = 1;
   } else {
     generateWorlds({check: arguments_.includes('--check')})
-      .then(result => console.log(arguments_.includes('--check') ? 'World design and generated source agree.' : result.changed ? 'Generated world source from admitted design.' : 'World source already matches its design.'))
+      .then(result => console.log(arguments_.includes('--check') ? 'World design and generated source agree.' : result.changed ? 'Generated the world module from validated definitions.' : 'World source already matches its design.'))
       .catch(error => { console.error(error.message); process.exitCode = 1; });
   }
 }

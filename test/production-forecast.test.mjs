@@ -107,7 +107,7 @@ test('recompute after native purchases, upgrades, taps and earned resets',()=>{
   }
 });
 
-test('shipped worlds and all admitted caps preserve forecast/native correspondence',()=>{
+test('shipped worlds and all supported production caps preserve forecast/native correspondence',()=>{
   for(const base of WORLDS)for(const cap of [1,60,21600,86400]) {
     const w=defineWorld({...base,offlineCapSeconds:cap}),input=producing(w);
     for(const phase of [0,1,137,500,999])for(const target of [0,1,5,30,cap*5,cap*5+1])

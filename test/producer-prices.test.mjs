@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLDS } from './fixtures/worlds.mjs';
-import { MAX_POINTS, MAX_LEVEL, defineWorld, newRun, admitRun, producerPrice, buyProducer,
+import { MAX_POINTS, MAX_LEVEL, defineWorld, newRun, validateRun, producerPrice, buyProducer,
   project, prestige, forecastProduction } from '../src/engine.mjs';
 
 // Independent bounded-number oracle: each product is below 3e15, hence exact.
@@ -45,7 +45,7 @@ test('all eight shipped producer ladders match an independent oracle through the
   }
 });
 
-test('every admitted growth factor preserves exact and fractional near-cap one-step prices', () => {
+test('every supported growth factor preserves exact and fractional near-cap one-step prices', () => {
   for (let growth = 10000; growth <= 30000; growth++) {
     for (const baseCost of [1, 3, 10000, 900719925473, 333333333333333, MAX_POINTS - 1, MAX_POINTS]) {
       const producer = {...WORLDS[0].producers[0], baseCost, growthBasisPoints: growth};
@@ -68,7 +68,7 @@ test('constant prices, the exact balance cap and unreachable prices retain bound
   assert.equal(producerPrice({...producer, baseCost: 333333333333334, growthBasisPoints: 30000}, 1), MAX_POINTS + 1);
 });
 
-test('objective admission refuses a genuinely above-cap final purchase previously rounded down', () => {
+test('objective validation rejects a genuinely above-cap final purchase previously rounded down', () => {
   const producer = {...WORLDS[0].producers[0], baseCost: 999300489657240, growthBasisPoints: 10007};
   assert.equal(producerPrice(producer, 1), MAX_POINTS + 1);
   const candidate = {...WORLDS[0], id: 'cap-objective', producers: [producer], prestigeObjectives: [
@@ -82,7 +82,7 @@ test('old saves keep their balances and inventory; only future quotes and debits
   for (const [world, id, owned, cost] of cases) {
     for (const banked of [cost - 1, cost, cost + 1, MAX_POINTS]) {
       const state = savedRun(world, id, owned, banked), before = structuredClone(state);
-      assert.deepEqual(admitRun(world, state), state);
+      assert.deepEqual(validateRun(world, state), state);
       assert.deepEqual(project(world, state, now).state, state);
       assert.equal(project(world, state, now).producers.find(p => p.id === id).nextCost, cost);
       const result = buyProducer(world, state, id, 1, now);
@@ -97,7 +97,7 @@ test('old saves keep their balances and inventory; only future quotes and debits
       } else assert.deepEqual(result.state, state);
       assert.deepEqual(state, before);
       const roundTrip = JSON.parse(JSON.stringify(result.state));
-      assert.deepEqual(admitRun(world, roundTrip), result.state);
+      assert.deepEqual(validateRun(world, roundTrip), result.state);
       assert.equal(prestige(world, roundTrip, now).accepted, true);
     }
   }
@@ -146,11 +146,11 @@ test('v2 objective progress and old save shape survive an exact-price purchase',
   ]});
   const cost = quote(world.producers[0], 189), state = savedRun(world, 'pencil', 189, cost);
   state.objectiveProgress.equip = 189;
-  assert.deepEqual(admitRun(world, state), state);
+  assert.deepEqual(validateRun(world, state), state);
   const result = buyProducer(world, state, 'pencil', 1, now);
   assert.equal(result.state.objectiveProgress.equip, 190);
   assert.equal(result.state.objectiveContract, state.objectiveContract);
   assert.equal(result.state.kind, state.kind);
   assert.deepEqual(Object.keys(result.state).sort(), Object.keys(state).sort());
-  assert.deepEqual(admitRun(world, JSON.parse(JSON.stringify(result.state))), result.state);
+  assert.deepEqual(validateRun(world, JSON.parse(JSON.stringify(result.state))), result.state);
 });

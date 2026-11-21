@@ -163,5 +163,5 @@ test('readiness uses exact bonuses without awarding objective progress or purcha
   assert.deepEqual(initial,before);assert.equal(initial.objectiveProgress.purchase,0);
   const ready=buyProducer(w,initial,'target',1,quote.readyAtMs);
   assert.equal(ready.state.objectiveProgress.purchase,1);
-  assert.deepEqual(engine.admitRun(w,JSON.parse(JSON.stringify(initial))),initial);
+  assert.deepEqual(engine.validateRun(w,JSON.parse(JSON.stringify(initial))),initial);
 });

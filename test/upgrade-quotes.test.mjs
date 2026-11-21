@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as engine from '@red-cup-engineering/incremental-idle-computer-game-engine/engine';
 import { WORLDS } from './fixtures/worlds.mjs';
 
-const {MAX_POINTS,MAX_LEVEL,newRun,defineWorld,admitRun,advance,buyUpgrade,
+const {MAX_POINTS,MAX_LEVEL,newRun,defineWorld,validateRun,advance,buyUpgrade,
   quoteUpgradePurchase,incomePerSecond,tapYield,availablePrestige}=engine;
 const now=1_793_797_200_000;
 const funded=(world,banked=MAX_POINTS)=>({...newRun(world,now),banked,runProduced:MAX_POINTS,allTime:MAX_POINTS});
@@ -18,7 +18,7 @@ function compare(world,state,id) {
   assert.equal(quote.rateGain,incomePerSecond(world,actual.state)-incomePerSecond(world,state));
   assert.equal(quote.tapGain,tapYield(world,actual.state)-tapYield(world,state));
   assert.deepEqual(state,before);
-  assert.deepEqual(admitRun(world,actual.state),actual.state);
+  assert.deepEqual(validateRun(world,actual.state),actual.state);
   return {quote,actual};
 }
 function fixture({rate=1,amount=50,effect='production',cost=1,unlockAt=0}={}) {
@@ -134,7 +134,7 @@ test('malformed or incompatible runs fail before upgrade lookup and remain untou
     assert.deepEqual(state,before);
   }
 });
-test('quotes cannot award objectives, unlock prestige or alter objective save admission',()=>{
+test('quotes cannot award objectives, unlock prestige or alter objective save validation',()=>{
   const world=defineWorld({...WORLDS[0],id:'upgrade-quote-objectives',prestigeObjectives:[
     {id:'improve',label:'Install fresh ink',action:'buy-upgrade',targetId:'ink',count:1}
   ]});
@@ -144,7 +144,7 @@ test('quotes cannot award objectives, unlock prestige or alter objective save ad
   assert.equal(availablePrestige(world,state),0);assert.deepEqual(state,before);
   const actual=buyUpgrade(world,state,'ink',now);
   assert.equal(actual.state.objectiveProgress.improve,1);assert.equal(availablePrestige(world,actual.state),2);
-  assert.deepEqual(admitRun(world,JSON.parse(JSON.stringify(actual.state))),actual.state);
+  assert.deepEqual(validateRun(world,JSON.parse(JSON.stringify(actual.state))),actual.state);
   assert.deepEqual(quoteUpgradePurchase(world,state,'ink'),quote);
   for(const bad of [
     {...state,objectiveProgress:{improve:1}},
@@ -165,7 +165,7 @@ test('quotes do not settle time; delayed commands recompute eligibility and use 
   assert.equal(actual.accepted,true);assert.equal(actual.state.banked,0);
   assert.equal(actual.state.runProduced,10);assert.equal(actual.state.lastMs,later);
   assert.equal(actual.state.objectiveProgress.improve,1);
-  assert.deepEqual(admitRun(world,actual.state),actual.state);
+  assert.deepEqual(validateRun(world,actual.state),actual.state);
   assert.equal(advance(world,actual.state,later+1000).gained,2);
   assert.equal(state.lastMs,now);assert.equal(state.banked,0);assert.equal(state.upgrades.boost,false);
   assert.equal(state.objectiveProgress.improve,0);
