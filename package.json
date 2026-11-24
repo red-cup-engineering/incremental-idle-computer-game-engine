@@ -17,8 +17,6 @@
     "@red-cup-engineering/signcell": "^0.18.0 || 0.18.1-dev.0"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "test:engine": "node --test test/active-interval.test.mjs test/engine.test.mjs test/prestige-quotes.test.mjs test/producer-prices.test.mjs test/production-arithmetic.test.mjs test/production-graph.test.mjs test/production-forecast.test.mjs test/purchase-forecast.test.mjs test/purchase-quotes.test.mjs test/transactions.test.mjs test/upgrade-quotes.test.mjs test/objectives.test.mjs test/world-validation.test.mjs",
     "generate": "node scripts/generate-worlds.mjs",
     "check:generated": "node scripts/generate-worlds.mjs --check",
     "build": "node scripts/build.mjs"
@@ -29,7 +27,6 @@
     "url": "https://github.com/561-group/.github/blob/main/TIPS.md"
   },
   "devDependencies": {
-    "jsdom": "^30.1.3",
     "@red-cup-engineering/jsnode-package-engineering-services-section": "^0.6.2 || 0.6.6-dev.0",
     "@red-cup-engineering/computer-game-systems-engineering-services-section": "^0.1.3 || 0.1.5-dev.0",
     "@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section": "0.4.7-dev.0"
