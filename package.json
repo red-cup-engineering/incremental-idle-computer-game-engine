@@ -1,0 +1,71 @@
+{
+  "name": "@red-cup-engineering/incremental-idle-computer-game-engine",
+  "version": "0.1.1-dev.2",
+  "private": true,
+  "type": "module",
+  "description": "Two complete local-only idle games over one declarative progression engine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/red-cup-engineering/incremental-idle-computer-game-engine.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@red-cup-engineering/computer-data-engineering-services-section": "^0.7.4 || 0.8.1-dev.0",
+    "@red-cup-engineering/game-engine": "0.1.0-dev.1",
+    "@red-cup-engineering/signcell": "^0.18.0 || 0.18.1-dev.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:engine": "node --test test/active-interval.test.mjs test/engine.test.mjs test/prestige-quotes.test.mjs test/producer-prices.test.mjs test/production-arithmetic.test.mjs test/production-graph.test.mjs test/production-forecast.test.mjs test/purchase-forecast.test.mjs test/purchase-quotes.test.mjs test/transactions.test.mjs test/upgrade-quotes.test.mjs test/objectives.test.mjs test/world-validation.test.mjs",
+    "generate": "node scripts/generate-worlds.mjs",
+    "check:generated": "node scripts/generate-worlds.mjs --check",
+    "build": "node scripts/build.mjs"
+  },
+  "license": "MIT",
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/561-group/.github/blob/main/TIPS.md"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.3",
+    "@red-cup-engineering/jsnode-package-engineering-services-section": "^0.6.2 || 0.6.6-dev.0",
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": "^0.1.3 || 0.1.5-dev.0",
+    "@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section": "0.4.7-dev.0"
+  },
+  "exports": {
+    "./engine": "./src/engine.mjs",
+    "./production-graph": "./src/production-graph.mjs",
+    "./production-spectrum": "./src/production-spectrum.mjs",
+    "./worlds": "./src/worlds.mjs",
+    "./transactions": "./src/transactions.mjs",
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
+    "./scripts/*": "./scripts/*",
+    "./design/*": "./design/*",
+    "./play": "./src/play.mjs"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "design",
+    "test"
+  ],
+  "peerDependencies": {
+    "@red-cup-engineering/jsnode-package-engineering-services-section": "^0.6.2 || 0.6.6-dev.0",
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": "^0.1.3 || 0.1.5-dev.0",
+    "@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section": "0.4.7-dev.0"
+  },
+  "peerDependenciesMeta": {
+    "@red-cup-engineering/jsnode-package-engineering-services-section": {
+      "optional": true
+    },
+    "@red-cup-engineering/computer-game-systems-engineering-services-section": {
+      "optional": true
+    },
+    "@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section": {
+      "optional": true
+    }
+  }
+}
