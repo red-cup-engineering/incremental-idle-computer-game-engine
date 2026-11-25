@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /** Generate the game catalog through the shared JSNode producer from authored design data. */
+import { sha256Digest } from "@red-cup-engineering/semiotic-content-address-system";
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { projectJsnodeModules } from '@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-modules';
 import { defineWorld } from '../src/engine.mjs';
 
@@ -11,7 +12,6 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const CATALOG_PATH = 'design/world-catalog.json';
 export const SCHEMA_PATH = 'design/world-catalog.schema.json';
 export const GENERATED_PATH = 'src/generated/world-definitions.mjs';
-const digest = bytes => 'sha256:' + createHash('sha256').update(bytes).digest('hex');
 const decode = bytes => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(bytes);
 
 async function producerIdentity() {
@@ -20,7 +20,7 @@ async function producerIdentity() {
     '@red-cup-engineering/jsnode-package-engineering-services-section/project-jsnode-data-modules',
   ];
   const sources = await Promise.all(specifiers.map(async specifier => ({
-    specifier, digest: digest(await readFile(fileURLToPath(import.meta.resolve(specifier)))),
+    specifier, digest: sha256Digest(await readFile(fileURLToPath(import.meta.resolve(specifier)))),
   })));
   return {package: '@red-cup-engineering/jsnode-package-engineering-services-section', sources};
 }
@@ -49,10 +49,10 @@ export async function projectWorlds({root = repositoryRoot} = {}) {
     files,
     producer: await producerIdentity(),
     design: [
-      {path: CATALOG_PATH, digest: digest(catalogBytes)},
-      {path: SCHEMA_PATH, digest: digest(schemaBytes)},
+      {path: CATALOG_PATH, digest: sha256Digest(catalogBytes)},
+      {path: SCHEMA_PATH, digest: sha256Digest(schemaBytes)},
     ],
-    generated: files.map(file => ({path: file.path, digest: digest(file.text)})),
+    generated: files.map(file => ({path: file.path, digest: sha256Digest(file.text)})),
   };
 }
 

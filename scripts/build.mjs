@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /** Static publisher for the actual browser game, not a second HTTP host. */
+import { sha256Digest } from "@red-cup-engineering/semiotic-content-address-system";
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import { buildBrowserBundle } from '@red-cup-engineering/project-browser-asset-tree-computer-systems-publishing-engineering-services-section/browser-bundle';
 import { generateWorlds } from './generate-worlds.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -57,14 +57,13 @@ export async function build(out = join(root,'dist')) {
 </main><script type="module" src="./assets/browser.mjs"></script></body></html>\n`);
   await writeFile(join(dest,'_headers'),`/*\n  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n`);
   const files=['index.html','assets/engine.mjs','assets/discrete-clock.mjs','assets/worlds.mjs','assets/generated/world-definitions.mjs','assets/browser.mjs','assets/verified-save-write.mjs','assets/style.css','_headers'];
-  const digest=bytes=>'sha256:'+createHash('sha256').update(bytes).digest('hex');
-  const manifest=await Promise.all(files.map(async path=>({path,digest:digest(await readFile(join(dest,path)))})));
+  const manifest=await Promise.all(files.map(async path=>({path,digest:sha256Digest(await readFile(join(dest,path)))})));
   const receipt={kind:'561.incremental-idle-fabrication-receipt/v1',
     design:fabrication.design,generated:fabrication.generated,
     producer:fabrication.producer,
     // Published v1 build records use these keys for the clock and save writer.
-    supplier:{specifier:dependency,digest:digest(clock)},
-    browserSupplier:{specifier:saveDependency,digest:digest(saveWriter)},artifacts:manifest,
+    supplier:{specifier:dependency,digest:sha256Digest(clock)},
+    browserSupplier:{specifier:saveDependency,digest:sha256Digest(saveWriter)},artifacts:manifest,
     receiving:'Generated the static game after validating the world definitions.'};
   await writeFile(join(dest,'fabrication-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
   return {dest,files:[...files,'fabrication-receipt.json'],receipt};
